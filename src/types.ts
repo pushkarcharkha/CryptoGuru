@@ -146,32 +146,11 @@ export type SidebarFeature =
 
 export interface NewsArticle {
   title: string;
-  description?: string;
   url: string;
-  thumb_2x?: string;
-  image?: string;
-  created_at?: string;
-  published_at?: string;
-  author?: string;
-  source?: {
-    name: string;
-    domain?: string;
-  };
-  votes?: {
-    negative: number;
-    positive: number;
-    important: number;
-    liked: number;
-    disliked: number;
-    saved: number;
-    comments: number;
-  };
-  currencies?: {
-    code: string;
-    title: string;
-    slug: string;
-    url: string;
-  }[];
+  source: string;
+  thumbnail: string | null;
+  publishedAt: string;
+  description: string;
 }
 
 export interface FearGreedData {

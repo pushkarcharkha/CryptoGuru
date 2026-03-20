@@ -113,13 +113,15 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       if (sentimentContext?.news && sentimentContext.news.length > 0) {
         let relevantNews = sentimentContext.news;
         if (detectedCoin) {
-          relevantNews = sentimentContext.news.filter((n: any) => n.title.toLowerCase().includes(detectedCoin!.toLowerCase()));
-        } else {
-          const black = ['amd', 'samsung', 'senator', 'politics'];
-          relevantNews = sentimentContext.news.filter((n: any) => !black.some(b => n.title.toLowerCase().includes(b)));
+          relevantNews = sentimentContext.news.filter((n: any) => n.title.toLowerCase().includes(detectedCoin!.toLowerCase()) || n.description?.toLowerCase().includes(detectedCoin!.toLowerCase()));
         }
+
         if (relevantNews.length > 0) {
-          newsBlock = `RELEVANT NEWS HEADLINES ${detectedCoin ? `FOR ${detectedCoin}` : '(GENERAL)'}:\n${relevantNews.slice(0, 5).map((n: any, i: number) => `${i + 1}. ${n.title}`).join('\n')}`;
+          const topNews = relevantNews.slice(0, 5).map((n: any, i: number) => `${i + 1}. ${n.title} (${n.source})`).join('\n');
+          newsBlock = `LATEST CRYPTO NEWS ${detectedCoin ? `(FILTERED FOR ${detectedCoin})` : ''}:
+${topNews}
+
+Only reference these headlines when directly relevant to what the user asked.`;
         }
       }
 

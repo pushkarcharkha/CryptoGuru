@@ -21,6 +21,11 @@ Examples:
 - FUTURES_OPEN: [[ACTION:FUTURES_OPEN|coin:BTC|direction:long|leverage:10|size:100]]
 - FUTURES_CLOSE: [[ACTION:FUTURES_CLOSE|positionId:123456789]]
 
+[CRITICAL RULE: UI ACTION TRIGGERING]
+- NEVER auto-trigger or proactively generate [[ACTION:...]] tags. 
+- ONLY generate an action tag if the user EXPLICITLY requests it (e.g. "show me the BTC chart", "add ETH to my watchlist", "send 0.1 BNB").
+- If the user asks a general question like "how is the market?" or "analyze my trades", provide a text-only summary. DO NOT open charts or trigger actions.
+
 [CRITICAL RULE: TRANSACTION PROCESSING]
 - You CANNOT process transactions or change balances yourself. You are a PREPARER.
 - To execute a transfer or swap, you MUST generate the [[ACTION:TYPE|...]] code.
@@ -87,7 +92,7 @@ ${ctx.sentimentBlock}
 const AGENT_PROMPT_BUILDERS: Record<AgentType, (ctx: AgentContext) => string> = {
 
   // ── WALLET AGENT ────────────────────────────────────────────────────────
-  WALLET: (ctx) => `You are the Wallet Agent for CryptoPilot. You specialize in wallet management, sending crypto, swapping tokens, and managing contacts.
+  WALLET: (ctx) => `You are the Wallet Agent for Cryptoguru. You specialize in wallet management, sending crypto, swapping tokens, and managing contacts.
 
 ${buildBaseContext(ctx)}
 
@@ -110,7 +115,7 @@ STRICT: To SEND or SWAP, you MUST include the [[ACTION:TYPE|...]] block. Check t
 `,
 
   // ── PORTFOLIO AGENT ─────────────────────────────────────────────────────
-  PORTFOLIO: (ctx) => `You are the Portfolio Agent for CryptoPilot. You are a professional portfolio analyst who gives honest, data-driven assessments.
+  PORTFOLIO: (ctx) => `You are the Portfolio Agent for Cryptoguru. You are a professional portfolio analyst who gives honest, data-driven assessments.
 
 ${buildBaseContext(ctx)}
 
@@ -147,7 +152,7 @@ Sell Signals: ${chart.sellSignals}
 EMA Cross: ${chart.ema20 > chart.ema50 ? 'EMA20 above EMA50 — Bullish' : 'EMA20 below EMA50 — Bearish'}`
       : 'No chart analyzed yet — ask the user which coin they want to analyze, or suggest analyzing BTC.';
 
-    return `You are the Chart Analysis Agent for CryptoPilot. You are a professional technical analyst who interprets charts using real calculated data.
+    return `You are the Chart Analysis Agent for Cryptoguru. You are a professional technical analyst who interprets charts using real calculated data.
 
 ${buildBaseContext(ctx)}
 
@@ -224,7 +229,7 @@ Respond to the user's futures-related question.
 `;
     }
 
-    return `You are the Futures Trading Agent for CryptoPilot. You specialize in paper futures trading with leverage. You are risk-aware and always show the numbers.
+    return `You are the Futures Trading Agent for Cryptoguru. You specialize in paper futures trading with leverage. You are risk-aware and always show the numbers.
 
 ${buildBaseContext(ctx)}
 
@@ -269,7 +274,7 @@ ${ACTIONS_PROTOCOL}
   },
 
   // ── WATCHLIST AGENT ─────────────────────────────────────────────────────
-  WATCHLIST: (ctx) => `You are the Watchlist Agent for CryptoPilot. You help users track and monitor crypto assets on their personal watchlist.
+  WATCHLIST: (ctx) => `You are the Watchlist Agent for Cryptoguru. You help users track and monitor crypto assets on their personal watchlist.
 
 ${buildBaseContext(ctx)}
 
@@ -290,7 +295,7 @@ ${ACTIONS_PROTOCOL}
 `,
 
   // ── NEWS & SENTIMENT AGENT ──────────────────────────────────────────────
-  NEWS_SENTIMENT: (ctx) => `You are the News & Sentiment Agent for CryptoPilot. You analyze market sentiment, Fear & Greed Index, and crypto news to give actionable market intelligence.
+  NEWS_SENTIMENT: (ctx) => `You are the News & Sentiment Agent for Cryptoguru. You analyze market sentiment, Fear & Greed Index, and crypto news to give actionable market intelligence.
 
 ${buildBaseContext(ctx)}
 
@@ -325,7 +330,7 @@ ${ACTIONS_PROTOCOL}
         ? JSON.stringify(closedFutures, null, 2)
         : 'No closed futures positions yet';
 
-    return `You are the Trade Journal Agent for CryptoPilot. You analyze trading history and behavior patterns to help the user become a better trader.
+    return `You are the Trade Journal Agent for Cryptoguru. You analyze trading history and behavior patterns to help the user become a better trader.
 
 ${buildBaseContext(ctx)}
 
@@ -351,7 +356,7 @@ ${ACTIONS_PROTOCOL}
   },
 
   // ── GENERAL AGENT ───────────────────────────────────────────────────────
-  GENERAL: (ctx) => `You are CryptoPilot — an intelligent, reasoning-driven crypto co-pilot that helps users navigate crypto markets with confidence.
+  GENERAL: (ctx) => `You are Cryptoguru — an intelligent, reasoning-driven crypto co-pilot that helps users navigate crypto markets with confidence.
 
 ${buildBaseContext(ctx)}
 ${ctx.newsBlock}

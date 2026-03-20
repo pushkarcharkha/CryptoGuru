@@ -28,7 +28,6 @@ const SIDEBAR_TO_SECTION: Record<string, string> = {
 
 /**
  * Detects which agent should handle the user's message.
- * Priority: sidebar context first, then message keyword matching.
  */
 export function detectAgent(
   userMessage: string,
@@ -39,101 +38,44 @@ export function detectAgent(
     ? SIDEBAR_TO_SECTION[activeSidebarSection] || activeSidebarSection
     : null;
 
-  // --- Chart Analysis Agent ---
-  if (
-    section === 'chart-analysis' ||
-    msg.includes('chart') ||
-    msg.includes('analyze') ||
-    msg.includes('pattern') ||
-    msg.includes('trendline') ||
-    msg.includes('support') ||
-    msg.includes('resistance') ||
-    msg.includes('candlestick') ||
-    msg.includes('ema') ||
-    msg.includes('technical analysis')
-  ) {
-    return 'CHART_ANALYSIS';
-  }
+  // 1. Explicit UI Feature Lock (If user clicks a sidebar preset, respect it)
+  // When a feature is clicked, the app sends a direct preset message exactly matching the feature.
+  if (msg === 'open portfolio' || msg.includes('analyze my portfolio')) return 'PORTFOLIO';
+  if (msg === 'open watchlist') return 'WATCHLIST';
+  if (msg === 'open chart') return 'CHART_ANALYSIS';
+  if (msg === 'open journal' || msg.includes('analyze my trading')) return 'TRADE_JOURNAL';
+  if (msg === 'open news') return 'NEWS_SENTIMENT';
 
-  // --- Futures Agent ---
-  if (
-    section === 'futures' ||
-    msg.includes('long') ||
-    msg.includes('short') ||
-    msg.includes('leverage') ||
-    msg.includes('futures') ||
-    msg.includes('position') ||
-    msg.includes('liquidat') ||
-    msg.includes('margin')
-  ) {
-    return 'FUTURES';
-  }
+  // 2. High-Confidence Keyword Matching (Commands)
+  if (msg.includes('swap ') || msg.includes('send ') || msg.includes('transfer ')) return 'WALLET';
+  if (msg.includes('open long') || msg.includes('open short') || msg.includes('leverage')) return 'FUTURES';
+  if (msg.includes('chart ') || msg.includes('candlestick') || msg.includes('trendline')) return 'CHART_ANALYSIS';
+  if (msg.includes('fear and greed') || msg.includes('sentiment')) return 'NEWS_SENTIMENT';
 
-  // --- Portfolio Agent ---
-  if (
-    section === 'portfolio' ||
-    msg.includes('portfolio') ||
-    msg.includes('holdings') ||
-    msg.includes('pnl') ||
-    msg.includes('profit') ||
-    msg.includes('loss') ||
-    msg.includes('allocation') ||
-    msg.includes('rebalance')
-  ) {
-    return 'PORTFOLIO';
-  }
+  // 3. Section Bias (If they are currently looking at a section, prefer that section for ambiguous queries)
+  if (section === 'futures' && (msg.includes('position') || msg.includes('liquidat') || msg.includes('margin') || msg.includes('close') || msg.includes('long') || msg.includes('short'))) return 'FUTURES';
+  if (section === 'chart-analysis' && (msg.includes('support') || msg.includes('resistance') || msg.includes('analyze') || msg.includes('ema'))) return 'CHART_ANALYSIS';
+  if (section === 'portfolio' && (msg.includes('pnl') || msg.includes('allocation') || msg.includes('rebalance') || msg.includes('profit') || msg.includes('loss'))) return 'PORTFOLIO';
+  if (section === 'trade-journal' && (msg.includes('history') || msg.includes('mistakes') || msg.includes('pattern') || msg.includes('review') || msg.includes('analyze'))) return 'TRADE_JOURNAL';
 
-  // --- Wallet Agent ---
-  if (
-    section === 'wallet' ||
-    msg.includes('send') ||
-    msg.includes('transfer') ||
-    msg.includes('contact') ||
-    msg.includes('address') ||
-    msg.includes('wallet') ||
-    msg.includes('balance') ||
-    msg.includes('swap')
-  ) {
-    return 'WALLET';
-  }
+  // 4. Fallback Keyword Matching (Lower confidence)
+  if (msg.includes('portfolio') || msg.includes('holdings') || msg.includes('allocation')) return 'PORTFOLIO';
+  if (msg.includes('futures') || msg.includes('margin') || msg.includes('liquidat')) return 'FUTURES';
+  if (msg.includes('wallet') || msg.includes('contact') || msg.includes('address') || msg.includes('balance')) return 'WALLET';
+  if (msg.includes('watchlist') || msg.includes('track') || msg.includes('monitor')) return 'WATCHLIST';
+  if (msg.includes('news') || msg.includes('what is happening')) return 'NEWS_SENTIMENT';
+  if (msg.includes('journal') || msg.includes('history') || msg.includes('past trade')) return 'TRADE_JOURNAL';
+  
+  // 5. If no keywords match, fall back to the section they are currently viewing
+  if (section === 'chart-analysis') return 'CHART_ANALYSIS';
+  if (section === 'futures') return 'FUTURES';
+  if (section === 'portfolio') return 'PORTFOLIO';
+  if (section === 'wallet') return 'WALLET';
+  if (section === 'watchlist') return 'WATCHLIST';
+  if (section === 'news-sentiment') return 'NEWS_SENTIMENT';
+  if (section === 'trade-journal') return 'TRADE_JOURNAL';
 
-  // --- Watchlist Agent ---
-  if (
-    section === 'watchlist' ||
-    msg.includes('watchlist') ||
-    msg.includes('add to watch') ||
-    msg.includes('track') ||
-    msg.includes('monitor')
-  ) {
-    return 'WATCHLIST';
-  }
-
-  // --- News & Sentiment Agent ---
-  if (
-    section === 'news-sentiment' ||
-    msg.includes('news') ||
-    msg.includes('sentiment') ||
-    msg.includes('fear') ||
-    msg.includes('greed') ||
-    msg.includes('market feeling') ||
-    msg.includes('what is happening')
-  ) {
-    return 'NEWS_SENTIMENT';
-  }
-
-  // --- Trade Journal Agent ---
-  if (
-    section === 'trade-journal' ||
-    msg.includes('journal') ||
-    msg.includes('history') ||
-    msg.includes('past trade') ||
-    msg.includes('what did i') ||
-    msg.includes('review my trade') ||
-    msg.includes('trading pattern')
-  ) {
-    return 'TRADE_JOURNAL';
-  }
-
+  // 6. Generic Default
   return 'GENERAL';
 }
 

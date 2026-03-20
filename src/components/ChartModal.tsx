@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { CoinGeckoCoin } from '../types';
 
 const TradingViewWidgetModal = ({ symbol }: { symbol: string }) => {

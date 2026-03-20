@@ -1,4 +1,5 @@
 import React from 'react';
+import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { SidebarFeature } from '../types';
 
 interface SidebarProps {
@@ -11,50 +12,50 @@ interface SidebarProps {
 
 const FEATURES: {
   id: SidebarFeature;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   message: string;
 }[] = [
   {
     id: 'portfolio',
-    icon: '💼',
+    icon: <Briefcase size={20} />,
     label: 'Portfolio',
     message: 'Give me a complete portfolio health check. What should I be holding right now based on current market conditions?',
   },
   {
     id: 'wallet',
-    icon: '👛',
+    icon: <Wallet size={20} />,
     label: 'Wallet & Contacts',
     message: 'Show me my wallet overview and help me understand my on-chain activity. What are the risks with my current holdings?',
   },
   {
     id: 'watchlist',
-    icon: '📈',
+    icon: <Clock size={20} />,
     label: 'Watchlist',
     message: 'Show my watchlist with current prices. Which coins on my radar have the best setup right now?',
   },
   {
     id: 'chart',
-    icon: '🕯️',
+    icon: <BarChart2 size={20} />,
     label: 'Chart Analysis',
     message: 'Analyze the current Bitcoin chart for me. What patterns do you see and what is the likely next move?',
   },
   {
     id: 'news-sentiment',
-    icon: '📊',
+    icon: <Radio size={20} />,
     label: 'News & Sentiment',
     message: 'What is the current market sentiment? Show me the Fear & Greed index and the latest top news.',
   },
   {
     id: 'futures',
-    icon: '📊',
+    icon: <Activity size={20} />,
     label: 'Futures',
     message: 'You\'re in paper futures mode. You can open long or short positions with leverage. This is simulated — no real money involved. Try saying \'open a long BTC position with 10x leverage for $100\'',
   },
 
   {
     id: 'journal',
-    icon: '📓',
+    icon: <BookOpen size={20} />,
     label: 'Trade Journal',
     message: 'Help me review my recent trading decisions. What patterns do you notice and how can I improve my strategy?',
   },
@@ -123,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isOpen && (
           <div className="fade-in" style={{ overflow: 'hidden' }}>
             <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '16px', color: '#00d4ff', whiteSpace: 'nowrap' }}>
-              CryptoPilot
+              Cryptoguru
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
               AI Agent
@@ -143,7 +144,9 @@ const Sidebar: React.FC<SidebarProps> = ({
             style={{ width: '100%', background: 'none', border: activeFeature === f.id ? undefined : 'none', textAlign: 'left', cursor: 'pointer' }}
             title={f.label}
           >
-            <span style={{ fontSize: '18px', flexShrink: 0, lineHeight: 1 }}>{f.icon}</span>
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', flexShrink: 0, color: activeFeature === f.id ? '#00d4ff' : 'var(--text-muted)' }}>
+              {f.icon}
+            </span>
             {isOpen && (
               <span className="fade-in" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {f.label}
@@ -162,7 +165,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
           title="Settings & API Key"
         >
-          <span style={{ fontSize: '18px', flexShrink: 0 }}>⚙️</span>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', flexShrink: 0, color: 'var(--text-muted)' }}>
+            <Settings size={20} />
+          </span>
           {isOpen && <span className="fade-in">Settings</span>}
         </button>
       </div>

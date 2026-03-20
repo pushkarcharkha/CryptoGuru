@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Trash2, Bot, User, BarChart2, Flame, ShieldAlert, Zap, Send } from 'lucide-react';
 import type { Message } from '../types';
 
 interface ChatPanelProps {
@@ -66,6 +67,32 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
+// Track which messages have been animated so they don't re-animate on re-render / tab switch
+const animatedMessageIds = new Set<string>();
+
+const TypewriterMessage = ({ messageId, content }: { messageId: string, content: string }) => {
+  const isNew = !animatedMessageIds.has(messageId);
+  const [displayed, setDisplayed] = useState(isNew ? '' : content);
+
+  useEffect(() => {
+    if (!isNew) {
+      setDisplayed(content);
+      return;
+    }
+
+    animatedMessageIds.add(messageId);
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed(content.slice(0, i));
+      i++;
+      if (i > content.length) clearInterval(interval);
+    }, 15);
+    return () => clearInterval(interval);
+  }, [content, isNew, messageId]);
+
+  return <>{renderMarkdown(displayed)}</>;
+};
+
 const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -98,10 +125,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
   };
 
   const QUICK_ACTIONS = [
-    { label: '📊 BTC Analysis', msg: 'Give me a quick BTC analysis — current trend, support/resistance, and what to watch.' },
-    { label: '🔥 Top Movers', msg: 'What are the top crypto movers today and should I be paying attention to any of them?' },
-    { label: '⚠️ Risk Check', msg: 'What are the biggest risks in the crypto market right now I should know about?' },
-    { label: '💡 Opportunity', msg: 'What\'s the best risk/reward opportunity in crypto right now?' },
+    { label: 'BTC Analysis', icon: <BarChart2 size={14} />, msg: 'Give me a quick BTC analysis — current trend, support/resistance, and what to watch.' },
+    { label: 'Top Movers', icon: <Flame size={14} />, msg: 'What are the top crypto movers today and should I be paying attention to any of them?' },
+    { label: 'Risk Check', icon: <ShieldAlert size={14} />, msg: 'What are the biggest risks in the crypto market right now I should know about?' },
+    { label: 'Opportunity', icon: <Zap size={14} />, msg: 'What\'s the best risk/reward opportunity in crypto right now?' },
   ];
 
   return (
@@ -137,7 +164,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
             }}
           />
           <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            CryptoPilot AI — llama-3.3-70b-versatile
+            Cryptoguru AI — llama-3.3-70b-versatile
           </span>
         </div>
         <button
@@ -163,7 +190,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
             e.currentTarget.style.background = 'none';
           }}
         >
-          🗑 Clear
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Trash2 size={14} /> Clear
+          </span>
         </button>
       </div>
 
@@ -182,7 +211,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className="fade-in"
+            className="message-enter"
             style={{
               display: 'flex',
               flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
@@ -203,17 +232,19 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                 flexShrink: 0,
                 background:
                   msg.role === 'assistant'
-                    ? 'linear-gradient(135deg, rgba(0,212,255,0.3), rgba(139,92,246,0.3))'
-                    : 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,255,136,0.2))',
+                    ? 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))'
+                    : 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,255,136,0.1))',
                 border: `1px solid ${msg.role === 'assistant' ? 'rgba(0,212,255,0.3)' : 'rgba(0,212,255,0.2)'}`,
               }}
             >
-              {msg.role === 'assistant' ? '🤖' : '👤'}
+              {msg.role === 'assistant' ? <Bot size={18} color="#00d4ff" /> : <User size={18} color="#00ff88" />}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '82%' }}>
               <div className={msg.role === 'assistant' ? 'msg-ai' : 'msg-user'}>
-                {renderMarkdown(msg.content)}
+                {msg.role === 'assistant' 
+                  ? <TypewriterMessage messageId={msg.id} content={msg.content} />
+                  : renderMarkdown(msg.content)}
               </div>
               <div
                 style={{
@@ -231,7 +262,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
 
         {/* Typing Indicator */}
         {isLoading && (
-          <div className="fade-in" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+          <div className="message-enter" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
             <div
               style={{
                 width: '32px',
@@ -242,11 +273,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                 justifyContent: 'center',
                 fontSize: '14px',
                 flexShrink: 0,
-                background: 'linear-gradient(135deg, rgba(0,212,255,0.3), rgba(139,92,246,0.3))',
+                background: 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))',
                 border: '1px solid rgba(0,212,255,0.3)',
               }}
             >
-              🤖
+              <Bot size={18} color="#00d4ff" />
             </div>
             <div
               className="msg-ai"
@@ -306,7 +337,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                 e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)';
               }}
             >
-              {qa.label}
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {qa.icon} {qa.label}
+              </span>
             </button>
           ))}
         </div>
@@ -340,15 +373,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
             disabled={!input.trim() || isLoading}
             style={{ height: '44px', width: '46px', flexShrink: 0 }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Send size={18} color="white" />
           </button>
         </div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>

@@ -10,6 +10,22 @@ import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, Swap
 import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
+import { AnimatedNumber } from './AnimatedNumber';
+import { 
+  Send as SendIcon, 
+  AlertTriangle, 
+  User, 
+  Trash2, 
+  Search, 
+  Book, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  CornerDownRight,
+  ArrowRightLeft,
+  DollarSign,
+  Activity
+} from 'lucide-react';
 
 interface RightPanelProps {
   view: RightPanelView;
@@ -36,12 +52,10 @@ interface RightPanelProps {
   activeCoin?: CoinGeckoCoin | null;
   onAnalysisComplete?: (stats: any) => void;
   newsData?: NewsArticle[];
-  panicNewsData?: NewsArticle[];
   fearGreedData?: FearGreedData[];
   newsLoading?: boolean;
   newsError?: string | null;
   newsLastUpdated?: number | null;
-  cryptoPanicToken?: string;
   futuresBalance?: number;
   futuresPositions?: FuturesPosition[];
   onCloseFuturesPosition?: (id: number, currentPrice: number) => void;
@@ -112,9 +126,10 @@ const RightPanel: React.FC<RightPanelProps> = ({
   activeCoin,
   onAnalysisComplete,
   newsData = [],
-  panicNewsData = [],
   fearGreedData = [],
   newsLoading,
+  newsError,
+  newsLastUpdated,
   futuresBalance,
   futuresPositions,
   onCloseFuturesPosition,
@@ -181,8 +196,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ fontWeight: 600, fontSize: '14px' }}>{coin.symbol}</span>
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: '#00d4ff' }}>
-                            {formatPrice(coin.price)}
+                          <span style={{ fontSize: '14px', color: '#00d4ff' }}>
+                            <AnimatedNumber value={coin.price} format={(n) => formatPrice(n)} />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
@@ -190,9 +205,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
                           <span style={{ 
                             fontSize: '11px', 
                             fontWeight: 600,
-                            color: coin.change24h >= 0 ? '#10b981' : '#ef4444' 
+                            color: coin.change24h >= 0 ? '#10ff88' : '#ff3366' 
                           }}>
-                            {formatChange(coin.change24h)}
+                            <AnimatedNumber value={coin.change24h} format={(n) => formatChange(n)} />
                           </span>
                         </div>
                       </div>
@@ -243,8 +258,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
             {/* Total */}
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Value</div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#00d4ff', fontFamily: 'JetBrains Mono, monospace' }}>
-                ${totalPortfolioValue.toLocaleString()}
+              <div style={{ fontSize: '22px', fontWeight: 700, color: '#00d4ff' }}>
+                <AnimatedNumber value={totalPortfolioValue} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
               </div>
             </div>
 
@@ -258,8 +273,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ fontWeight: 600, fontSize: '13px' }}>{h.symbol}</span>
-                          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: '#00d4ff' }}>
-                            ${h.valueUsd.toLocaleString()}
+                          <span style={{ fontSize: '13px', color: '#00d4ff' }}>
+                            <AnimatedNumber value={h.valueUsd} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
@@ -294,9 +309,11 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>{activeCoin.name} ({activeCoin.symbol.toUpperCase()})</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', fontFamily: 'JetBrains Mono, monospace', color: '#00d4ff' }}>{formatPrice(activeCoin.current_price)}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10b981' : '#ef4444' }}>
-                      {formatChange(activeCoin.price_change_percentage_24h)}
+                    <span style={{ fontSize: '14px', color: '#00d4ff' }}>
+                      <AnimatedNumber value={activeCoin.current_price} format={(n) => formatPrice(n)} />
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366' }}>
+                      <AnimatedNumber value={activeCoin.price_change_percentage_24h} format={(n) => formatChange(n)} />
                     </span>
                   </div>
                 </div>
@@ -342,8 +359,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
         {view === 'transaction' && (
           <div className="panel-content fade-in">
             <div className="glass-card" style={{ padding: '16px', marginBottom: '12px', borderColor: 'rgba(0,212,255,0.2)' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 600 }}>
-                💸 SEND PREVIEW
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: 600 }}>
+                <SendIcon size={12} /> SEND PREVIEW
               </div>
               {[
                 { label: 'From', value: wallet.isConnected && wallet.address ? wallet.address : 'Not connected' },
@@ -409,7 +426,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 color: '#ff4466',
               }}
             >
-              ⚠️ Always verify the recipient address before confirming any transaction.
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={14} /> Always verify the recipient address before confirming any transaction.</span>
             </div>
           </div>
         )}
@@ -418,8 +435,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
         {view === 'swap' && (
           <div className="panel-content fade-in">
             <div className="glass-card" style={{ padding: '16px', marginBottom: '12px', borderColor: 'rgba(139,92,246,0.2)' }}>
-              <div style={{ fontSize: '11px', color: '#8b5cf6', marginBottom: '10px', fontWeight: 600 }}>
-                🥞 PANCAKESWAP PREVIEW
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#8b5cf6', marginBottom: '10px', fontWeight: 600 }}>
+                <ArrowRightLeft size={12} /> PANCAKESWAP PREVIEW
               </div>
               {[
                 { label: 'From', value: swapPreview ? `${swapPreview.fromAmount} ${swapPreview.fromToken}` : 'N/A' },
@@ -476,7 +493,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 color: '#8b5cf6',
               }}
             >
-              ⚠️ Swaps are executed via PancakeSwap v3 on BNB Smart Chain.
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={14} /> Swaps are executed via PancakeSwap v3 on BNB Smart Chain.</span>
             </div>
           </div>
         )}
@@ -488,7 +505,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {Object.keys(contacts).length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '12px' }}>👤</div>
+                  <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><User size={32} opacity={0.5} /></div>
                   <div style={{ fontSize: '14px' }}>No contacts saved yet.</div>
                   <div style={{ fontSize: '11px', marginTop: '4px' }}>Say "add [name] [address]" to save one.</div>
                 </div>
@@ -508,14 +525,14 @@ const RightPanel: React.FC<RightPanelProps> = ({
                           style={{ padding: '6px', borderRadius: '6px', background: 'rgba(0,212,255,0.1)', border: 'none', cursor: 'pointer', color: 'var(--accent-cyan)' }}
                           title="Send to this contact"
                         >
-                          💸
+                          <SendIcon size={14} />
                         </button>
                         <button 
                           onClick={() => onContactDeleteClick?.(name)}
                           style={{ padding: '6px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', border: 'none', cursor: 'pointer', color: '#ef4444' }}
                           title="Delete contact"
                         >
-                          🗑️
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -548,7 +565,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                   outline: 'none'
                 }}
               />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>🔍</span>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Search size={14} /></span>
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -636,15 +653,15 @@ const RightPanel: React.FC<RightPanelProps> = ({
                             {coin.symbol}
                           </span>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontFamily: 'JetBrains Mono, monospace', color: '#e2e8f0' }}>
-                              ${coin.current_price.toLocaleString()}
+                            <span style={{ fontSize: '12px', color: '#e2e8f0' }}>
+                              <AnimatedNumber value={coin.current_price} format={(n) => formatPrice(n)} />
                             </span>
                             <span style={{ 
                               fontSize: '10px', 
                               fontWeight: 700,
-                              color: coin.price_change_percentage_24h >= 0 ? '#10b981' : '#ef4444'
+                              color: coin.price_change_percentage_24h >= 0 ? '#10ff88' : '#ff3366'
                             }}>
-                              {formatChange(coin.price_change_percentage_24h)}
+                              <AnimatedNumber value={coin.price_change_percentage_24h} format={(n) => formatChange(n)} />
                             </span>
                           </div>
                         </div>
@@ -660,9 +677,10 @@ const RightPanel: React.FC<RightPanelProps> = ({
         {view === 'news-sentiment' && (
           <NewsSentimentPanel 
             newsData={newsData} 
-            panicNewsData={panicNewsData}
-            fearGreedData={fearGreedData}
-            isLoading={newsLoading}
+            fearGreed={fearGreedData}
+            isLoading={!!newsLoading}
+            error={newsError || null}
+            lastUpdated={newsLastUpdated || null}
           />
         )}
 
@@ -688,12 +706,12 @@ const RightPanel: React.FC<RightPanelProps> = ({
                   outline: 'none'
                 }}
               />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>🔍</span>
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}><Search size={14} /></span>
             </div>
 
             {filteredHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px' }}>📖</div>
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}><Book size={32} opacity={0.5} /></div>
                 <div style={{ fontSize: '14px' }}>No trades recorded.</div>
                 <div style={{ fontSize: '11px', marginTop: '4px' }}>Every transfer or swap will appear here.</div>
               </div>
@@ -713,7 +731,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                           justifyContent: 'center',
                           fontSize: '14px'
                         }}>
-                          {tx.type === 'send' ? '💸' : tx.type === 'swap' ? '🔄' : '💰'}
+                          {tx.type === 'send' ? <CornerDownRight size={14} /> : tx.type === 'swap' ? <ArrowRightLeft size={14} /> : <DollarSign size={14} />}
                         </div>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>
@@ -734,7 +752,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
                           color: tx.status === 'success' ? '#10b981' : tx.status === 'failed' ? '#ef4444' : '#f59e0b',
                           textTransform: 'uppercase'
                         }}>
-                          {tx.status === 'success' ? '✅ Success' : tx.status === 'failed' ? '❌ Failed' : '⏳ Pending'}
+                          {tx.status === 'success' ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><CheckCircle size={10} /> SUCCESS</span>
+                          ) : tx.status === 'failed' ? (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><XCircle size={10} /> FAILED</span>
+                          ) : (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><Clock size={10} /> PENDING</span>
+                          )}
                         </div>
                         <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
                           {new Date(tx.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -783,7 +807,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           fontFamily: 'JetBrains Mono, monospace',
         }}
       >
-        🟢 Live Prices · Binance WS & CoinGecko
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}><Activity size={10} color="#00ff88" /> Live Prices · Binance WS & CoinGecko</span>
       </div>
     </div>
   );

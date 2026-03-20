@@ -1,4 +1,6 @@
+import { Rocket, Bot, Radio, Wallet } from 'lucide-react';
 import type { WalletState, CryptoPrice } from '../types';
+import { AnimatedNumber } from './AnimatedNumber';
 
 interface TopBarProps {
   activeTab: 'agent' | 'signals';
@@ -51,7 +53,7 @@ const TopBar: React.FC<TopBarProps> = ({
             fontSize: '16px',
           }}
         >
-          🚀
+          <Rocket size={18} color="#fff" />
         </div>
         <div>
           <div
@@ -65,11 +67,38 @@ const TopBar: React.FC<TopBarProps> = ({
               lineHeight: 1.2,
             }}
           >
-            CryptoPilot AI
+            Cryptoguru AI
           </div>
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Bloomberg × ChatGPT Terminal
           </div>
+        </div>
+      </div>
+
+      {/* Scrolling ticker */}
+      <div style={{ flex: 1, overflow: 'hidden', margin: '0 20px', maskImage: 'linear-gradient(90deg, transparent, white 5%, white 95%, transparent)' }}>
+        <div className="ticker-content" style={{ display: 'flex', gap: '24px', fontSize: '12px', whiteSpace: 'nowrap' }}>
+          {prices && prices.map(p => (
+            <span key={p.id}>
+              <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>{p.symbol}</span>
+              <AnimatedNumber 
+                value={p.price} 
+                format={(n) => n < 1 ? `$${n.toFixed(4)}` : `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                className={p.change24h >= 0 ? 'positive' : 'negative'}
+              />
+            </span>
+          ))}
+          {/* Duplicate for infinite effect */}
+          {prices && prices.map(p => (
+            <span key={`dup-${p.id}`}>
+              <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>{p.symbol}</span>
+              <AnimatedNumber 
+                value={p.price} 
+                format={(n) => n < 1 ? `$${n.toFixed(4)}` : `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                className={p.change24h >= 0 ? 'positive' : 'negative'}
+              />
+            </span>
+          ))}
         </div>
       </div>
 
@@ -88,12 +117,15 @@ const TopBar: React.FC<TopBarProps> = ({
             fontSize: '13px',
             transition: 'all 0.2s ease',
             background: activeTab === 'agent' ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25))' : 'transparent',
-            color: activeTab === 'agent' ? '#00d4ff' : 'var(--text-secondary)',
-            boxShadow: activeTab === 'agent' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
-          }}
-        >
-          🤖 AI Agent
-        </button>
+          color: activeTab === 'agent' ? '#00d4ff' : 'var(--text-secondary)',
+          boxShadow: activeTab === 'agent' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        <Bot size={16} /> AI Agent
+      </button>
         <button
           id="tab-signals"
           onClick={() => onTabChange('signals')}
@@ -107,31 +139,36 @@ const TopBar: React.FC<TopBarProps> = ({
             fontSize: '13px',
             transition: 'all 0.2s ease',
             background: activeTab === 'signals' ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25))' : 'transparent',
-            color: activeTab === 'signals' ? '#00d4ff' : 'var(--text-secondary)',
-            boxShadow: activeTab === 'signals' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
-          }}
-        >
-          📡 Signal Feed
-        </button>
+          color: activeTab === 'signals' ? '#00d4ff' : 'var(--text-secondary)',
+          boxShadow: activeTab === 'signals' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}
+      >
+        <Radio size={16} /> Signal Feed
+      </button>
       </div>
 
       {/* Right: Wallet */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {wallet.isConnected && (
           <div
-            className="fade-in"
+            className="fade-in mono"
             style={{
               padding: '6px 12px',
               background: 'rgba(0, 255, 136, 0.08)',
               border: '1px solid rgba(0, 255, 136, 0.2)',
               borderRadius: '8px',
-              fontSize: '12px',
+              fontSize: '13px',
               color: '#00ff88',
-              fontFamily: 'JetBrains Mono, monospace',
               fontWeight: 600,
             }}
           >
-            ${totalUsdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <AnimatedNumber
+              value={totalUsdValue}
+              format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            />
           </div>
         )}
         <button
@@ -156,21 +193,13 @@ const TopBar: React.FC<TopBarProps> = ({
               Connecting...
             </span>
           ) : wallet.isConnected && wallet.address ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#00ff88',
-                  boxShadow: '0 0 8px #00ff88',
-                }}
-              />
-              {formatAddress(wallet.address)}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="live-dot" />
+              <span className="mono">{formatAddress(wallet.address)}</span>
             </span>
           ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>🦊</span> Connect Wallet
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ display: 'flex', alignItems: 'center' }}><Wallet size={16} /></span> Connect Wallet
             </span>
           )}
         </button>

@@ -1,20 +1,18 @@
 import React from 'react';
+import { Frown, Meh, Smile, AlertTriangle, ExternalLink } from 'lucide-react';
 import type { NewsArticle, FearGreedData } from '../types';
 
 interface NewsSentimentPanelProps {
   fearGreed: FearGreedData[];
-  coinGeckoNews: NewsArticle[];
-  cryptoPanicNews: NewsArticle[];
+  newsData: NewsArticle[];
   isLoading: boolean;
   error: string | null;
   lastUpdated: number | null;
-  cryptoPanicToken: string;
 }
 
 const NewsSentimentPanel: React.FC<NewsSentimentPanelProps> = ({
   fearGreed,
-  coinGeckoNews,
-  cryptoPanicNews,
+  newsData,
   isLoading,
   error,
   lastUpdated,
@@ -32,12 +30,12 @@ const NewsSentimentPanel: React.FC<NewsSentimentPanelProps> = ({
   };
 
   const getSentimentEmoji = (classification: string) => {
-    if (classification.includes('Extreme Fear')) return '😱';
-    if (classification.includes('Fear')) return '😟';
-    if (classification.includes('Neutral')) return '😐';
-    if (classification.includes('Extreme Greed')) return '🤑';
-    if (classification.includes('Greed')) return '😊';
-    return '😶';
+    if (classification.includes('Extreme Fear')) return <Frown size={24} color="#ef4444" />;
+    if (classification.includes('Fear')) return <Frown size={24} color="#f97316" />;
+    if (classification.includes('Neutral')) return <Meh size={24} color="#eab308" />;
+    if (classification.includes('Extreme Greed')) return <Smile size={24} color="#22c55e" />;
+    if (classification.includes('Greed')) return <Smile size={24} color="#84cc16" />;
+    return <Meh size={24} color="#a1a1aa" />;
   };
 
   const timeAgo = (dateStr?: string) => {
@@ -58,88 +56,69 @@ const NewsSentimentPanel: React.FC<NewsSentimentPanelProps> = ({
     return Math.floor(seconds) + "s";
   };
 
-  const NewsCard = ({ article }: { article: NewsArticle }) => {
-    const isSignals = !!(article.votes);
-    const borderLeftColor = isSignals 
-      ? ((article.votes?.positive || 0) > (article.votes?.negative || 0) ? '#00ff88' : '#ff4444')
-      : 'transparent';
-
-    return (
-      <div 
-        className="news-card"
-        style={{ 
-          padding: '12px', 
-          marginBottom: '10px', 
-          display: 'flex', 
-          gap: '12px',
-          background: 'rgba(255,255,255,0.03)',
-          borderRadius: '12px',
-          borderLeft: isSignals ? `4px solid ${borderLeftColor}` : 'none',
+  const NewsCard = ({ article }: { article: NewsArticle }) => (
+    <div className="news-card" style={{
+      padding: '12px', 
+      marginBottom: '10px', 
+      background: 'rgba(255,255,255,0.03)',
+      borderRadius: '12px',
+      pointerEvents: 'all',
+      position: 'relative',
+      zIndex: 101,
+      border: '1px solid rgba(255,255,255,0.02)'
+    }}>
+      {article.thumbnail && (
+        <img 
+          src={article.thumbnail} 
+          alt=""
+          onError={(e) => e.currentTarget.style.display = 'none'}
+          style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }}
+        />
+      )}
+      
+      {/* Source badge */}
+      <span style={{
+        background: 'rgba(0,255,136,0.1)',
+        color: '#00ff88',
+        fontSize: '10px',
+        padding: '2px 8px',
+        borderRadius: '4px',
+        marginBottom: '6px',
+        display: 'inline-block'
+      }}>
+        {article.source}
+      </span>
+  
+      <p style={{ color: '#e8e8ff', fontSize: '13px', lineHeight: '1.5', margin: '0 0 6px 0', fontWeight: 600 }}>
+        {article.title}
+      </p>
+  
+      <p style={{ color: '#5555aa', fontSize: '11px', margin: '0 0 8px 0' }}>
+        {timeAgo(article.publishedAt)}
+      </p>
+  
+      <button
+        className="read-more-btn"
+        onMouseDown={(e) => {
+          e.stopPropagation()
+          window.open(article.url, '_blank', 'noopener,noreferrer')
+        }}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#00d4ff',
+          fontSize: '12px',
+          cursor: 'pointer',
+          padding: '0',
           pointerEvents: 'all',
-          position: 'relative',
-          zIndex: 101
+          textDecoration: 'underline'
         }}
       >
-        <div style={{ flexShrink: 0 }}>
-          { (article.thumb_2x || article.image) && (
-            <img 
-              src={article.thumb_2x || article.image} 
-              alt="news" 
-              style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} 
-              onError={(e) => (e.currentTarget.style.display = 'none')}
-            />
-          )}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h4 style={{ 
-            fontSize: '13px', 
-            fontWeight: 600, 
-            lineHeight: 1.4, 
-            margin: '0 0 4px 0',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            color: '#e2e8f0'
-          }}>
-            {article.title}
-          </h4>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{article.source?.name || article.author || 'Crypto News'} · {timeAgo(article.created_at || article.published_at)}</span>
-          </div>
-
-          {article.url && (
-            <button
-              className="read-more-btn"
-              onMouseDown={(e) => {
-                e.stopPropagation()
-                window.open(article.url, '_blank')
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#00d4ff',
-                fontSize: '12px',
-                cursor: 'pointer',
-                padding: '4px 0 0 0',
-                textDecoration: 'underline',
-                pointerEvents: 'all',
-                zIndex: 102,
-                position: 'relative',
-                display: 'inline-block'
-              }}
-            >
-              Read More ↗
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // Combine news for a single feed
-  const allNews = [...coinGeckoNews, ...cryptoPanicNews].sort((a, b) => 
-    new Date(b.created_at || b.published_at || 0).getTime() - new Date(a.created_at || a.published_at || 0).getTime()
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          Read More <ExternalLink size={12} />
+        </span>
+      </button>
+    </div>
   );
 
   return (
@@ -172,7 +151,7 @@ const NewsSentimentPanel: React.FC<NewsSentimentPanelProps> = ({
         
         {latestFG ? (
           <>
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '24px', marginBottom: '8px' }}>
                {getSentimentEmoji(latestFG.value_classification)} {latestFG.value_classification.toUpperCase()}
             </div>
             
@@ -206,17 +185,17 @@ const NewsSentimentPanel: React.FC<NewsSentimentPanelProps> = ({
 
       {/* News Feed */}
       <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
-        {isLoading && allNews.length === 0 ? (
+        {isLoading && newsData.length === 0 ? (
           [1, 2, 3, 4].map(i => (
             <div key={i} className="skeleton" style={{ height: '100px', borderRadius: '12px', marginBottom: '10px' }} />
           ))
         ) : error ? (
-           <div style={{ textAlign: 'center', padding: '20px', color: '#ef4444', fontSize: '13px' }}>
-              ⚠️ {error}
+           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', textAlign: 'center', padding: '20px', color: '#ef4444', fontSize: '13px' }}>
+              <AlertTriangle size={16} /> {error}
            </div>
         ) : (
-          allNews.length > 0 ? (
-            allNews.map((article, idx) => (
+          newsData.length > 0 ? (
+            newsData.map((article, idx) => (
               <NewsCard key={idx} article={article} />
             ))
           ) : (

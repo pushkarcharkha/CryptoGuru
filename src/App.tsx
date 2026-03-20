@@ -15,6 +15,7 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import ChartModal from './components/ChartModal';
+import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
 import { ethers } from 'ethers';
 
@@ -28,9 +29,17 @@ function App() {
   const [activeCoin, setActiveCoin] = useState<CoinGeckoCoin | null>(null);
   const [transactionPreview, setTransactionPreview] = useState<TransactionPreview | null>(null);
   const [swapPreview, setSwapPreview] = useState<SwapPreview | null>(null);
-  const [cryptoPanicToken, setCryptoPanicToken] = useState<string>(() => localStorage.getItem('cryptopanic_token') || '');
-  const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
   const [watchlistCoin, setWatchlistCoin] = useState<CoinGeckoCoin | null>(null);
+  const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
+
+  const [showScanline, setShowScanline] = useState(true);
+  const [showWalletAnim, setShowWalletAnim] = useState(false);
+  const prevWalletConnected = useRef(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setShowScanline(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
   
   // Use ref to break circular dependency with useGroqChat
   const addSystemMessageRef = useRef<((content: string) => void) | null>(null);
@@ -39,19 +48,27 @@ function App() {
   }, []);
 
   const { wallet, connectWallet, switchNetwork, refreshBalances, getExplorerUrl, formatAddress } = useWallet();
+
+  useEffect(() => {
+    if (wallet.isConnected && !prevWalletConnected.current) {
+      setShowWalletAnim(true);
+      setTimeout(() => setShowWalletAnim(false), 2300);
+    }
+    prevWalletConnected.current = wallet.isConnected;
+  }, [wallet.isConnected]);
+
   const { contacts, addContact, removeContact } = useContacts();
   const { history, saveTransaction } = useTransactionHistory();
   const { getSwapQuote, approveToken } = usePancakeSwap();
   const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
   
   const { 
-    coinGeckoNews: newsData, 
-    cryptoPanicNews: panicNewsData, 
+    newsData, 
     fearGreedData, 
     isLoading: newsLoading, 
     error: newsError, 
     lastUpdated: newsLastUpdated 
-  } = useNews(cryptoPanicToken);
+  } = useNews();
 
   const { prices, isLoading: pricesLoading } = useCryptoPrices(['bitcoin', 'ethereum', 'solana', 'cardano', 'chainlink', 'binancecoin', 'matic-network', 'avalanche-2', 'tether', 'usd-coin', 'ripple', 'polkadot']);
   
@@ -94,7 +111,7 @@ function App() {
           const fromAddr = BNB_TOKENS[fromToken.toUpperCase()] || fromToken;
           const toAddr = BNB_TOKENS[toToken.toUpperCase()] || toToken;
           
-          addSystemMessageProxy(`🔍 Fetching PancakeSwap quote for **${amount} ${fromToken}**...`);
+          addSystemMessageProxy(`Fetching PancakeSwap quote for **${amount} ${fromToken}**...`);
 
           const decimals = 18; 
           const amountWei = ethers.parseUnits(amount, decimals).toString();
@@ -116,22 +133,21 @@ function App() {
           });
           setRightPanelView('swap');
           setManualPanelOverride('swap');
-          addSystemMessageProxy(`✅ Quote received! You'll get approx **${parseFloat(estimatedOutput).toFixed(4)} ${toToken.toUpperCase()}**. Review and confirm on the right.`);
+          addSystemMessageProxy(`Quote received! You'll get approx **${parseFloat(estimatedOutput).toFixed(4)} ${toToken.toUpperCase()}**. Review and confirm on the right.`);
         } catch (err: any) {
-          addSystemMessageProxy(`❌ Swap Error: ${err.message}`);
+          addSystemMessageProxy(`Swap Error: ${err.message}`);
         }
       }
     } else if (action === 'WATCHLIST_ADD') {
       const { coinId } = params;
       if (coinId) {
-        toggleWatchlist(coinId);
-        addSystemMessageProxy(`✅ Added **${coinId}** to your watchlist.`);
+        addSystemMessageProxy(`Added **${coinId}** to your watchlist.`);
       }
     } else if (action === 'WATCHLIST_REMOVE') {
       const { coinId } = params;
       if (coinId) {
         toggleWatchlist(coinId);
-        addSystemMessageProxy(`🗑️ Removed **${coinId}** from your watchlist.`);
+        addSystemMessageProxy(`Removed **${coinId}** from your watchlist.`);
       }
     } else if (action === 'ANALYZE_CHART') {
       const coinId = params.coinId || 'bitcoin';
@@ -140,9 +156,9 @@ function App() {
         setActiveCoin(coin);
         setRightPanelView('coin-chart');
         setManualPanelOverride('coin-chart');
-        addSystemMessageProxy(`🔍 Analyzing **${coin.name}** chart...`);
+        addSystemMessageProxy(`Analyzing **${coin.name}** chart...`);
       } else {
-        addSystemMessageProxy(`❌ Sorry, I couldn't find a chart for **${coinId}** to analyze.`);
+        addSystemMessageProxy(`Sorry, I couldn't find a chart for **${coinId}** to analyze.`);
       }
     } else if (action === 'SHOW_CHART') {
       const { coinId } = params;
@@ -152,21 +168,21 @@ function App() {
           setActiveCoin(coin);
           setRightPanelView('coin-chart');
           setManualPanelOverride('coin-chart');
-          addSystemMessageProxy(`📈 Opening **${coin.name}** chart...`);
+          addSystemMessageProxy(`Opening **${coin.name}** chart...`);
         } else {
-          addSystemMessageProxy(`❌ Sorry, I couldn't find a chart for **${coinId}**.`);
+          addSystemMessageProxy(`Sorry, I couldn't find a chart for **${coinId}**.`);
         }
       }
     } else if (action === 'NAVIGATE') {
       const { view } = params;
       if (view === 'watchlist') {
         setPanelSafe('watchlist');
-        addSystemMessageProxy(`📋 Opening your watchlist.`);
+        addSystemMessageProxy(`Opening your watchlist.`);
       }
     } else if (action === 'SHOW_NEWS') {
       setRightPanelView('news-sentiment');
       setManualPanelOverride('news-sentiment'); // Hard override when showing news
-      addSystemMessageProxy(`📊 Opening Market News & Sentiment...`);
+      addSystemMessageProxy(`Opening Market News & Sentiment...`);
     } else if (action === 'FUTURES_OPEN') {
       const { coin, direction, leverage, size } = params;
       if (coin && direction && leverage && size && prices) {
@@ -177,15 +193,15 @@ function App() {
           
           const lev = parseInt(leverage);
           if (lev >= 50) {
-            addSystemMessageProxy(`⚠️ **Warning**: ${lev}x leverage is extremely risky. A small price move against you will liquidate the position.`);
+            addSystemMessageProxy(`Warning: ${lev}x leverage is extremely risky. A small price move against you will liquidate the position.`);
           }
 
           const pos = openPosition(coin, direction as 'long' | 'short', lev, parseFloat(size), currentPrice);
           setRightPanelView('futures');
           setManualPanelOverride('futures');
-          addSystemMessageProxy(`🚀 **Position Opened**\n${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x\nEntry: $${pos.entryPrice.toLocaleString()}\nSize: $${pos.size}\nMargin: $${pos.margin.toFixed(2)}\nLiq Price: $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+          addSystemMessageProxy(`Position Opened: ${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x\nEntry: $${pos.entryPrice.toLocaleString()}\nSize: $${pos.size}\nMargin: $${pos.margin.toFixed(2)}\nLiq Price: $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
         } catch (err: any) {
-          addSystemMessageProxy(`❌ Failed to open position: ${err.message}`);
+          addSystemMessageProxy(`Failed to open position: ${err.message}`);
         }
       }
     } else if (action === 'FUTURES_CLOSE') {
@@ -199,13 +215,13 @@ function App() {
           closePosition(id, currentPrice);
           
           const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
-          addSystemMessageProxy(`✅ **Position Closed**\n${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
+          addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
         }
       }
     }
   }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL]);
 
-  const { messages, isLoading, sendMessage, addSystemMessage, clearMessages, lastAgent } = useGroqChat(apiKey, handleAIAction);
+  const { messages, isLoading, sendMessage, addSystemMessage, clearMessages } = useGroqChat(apiKey, handleAIAction);
   
   useEffect(() => {
     addSystemMessageRef.current = addSystemMessage;
@@ -214,14 +230,14 @@ function App() {
   const handleAnalysisComplete = useCallback((stats: any) => {
     // Hidden message to the AI to trigger the formatted analysis response
     const statsMessage = `Chart analysis complete for ${stats.coinSymbol}. 
-Here are the EXACT values I calculated and drew on the chart:
+Here are the exact values calculated and visualized on the chart:
 
 Current Price: $${stats.currentPrice.toLocaleString()}
-Support Level: $${stats.support.toLocaleString()} (drawn as green line)
-Resistance Level: $${stats.resistance.toLocaleString()} (drawn as red line)  
+Support Level: $${stats.support.toLocaleString()}
+Resistance Level: $${stats.resistance.toLocaleString()}
 Trendline: $${stats.trendline ? '$' + stats.trendline.toLocaleString() : 'not detected'}
-EMA 20: $${stats.ema20.toLocaleString()} (yellow line)
-EMA 50: $${stats.ema50.toLocaleString()} (purple line)
+EMA 20: $${stats.ema20.toLocaleString()}
+EMA 50: $${stats.ema50.toLocaleString()}
 EMA Cross: ${stats.ema20 > stats.ema50 ? 'EMA20 above EMA50 — Bullish' : 'EMA20 below EMA50 — Bearish'}
 Buy Signals detected: ${stats.buySignals}
 Sell Signals detected: ${stats.sellSignals}
@@ -321,7 +337,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
     
     let txHash = "";
     try {
-      addSystemMessage(`⏳ Requesting signature for **${preview.amount} ${preview.coin}**...`);
+      addSystemMessage(`Requesting signature for **${preview.amount} ${preview.coin}**...`);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const network = await provider.getNetwork();
@@ -356,7 +372,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       
       txHash = response.hash;
       
-      addSystemMessageProxy(`📡 Transaction broadcasted! **Hash**: ${txHash.slice(0, 10)}... (Status: **Pending**)`);
+      addSystemMessageProxy(`Transaction broadcasted! Hash: ${txHash.slice(0, 10)}... (Status: Pending)`);
       
       saveTransaction({
         type: 'send',
@@ -373,7 +389,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       setTransactionPreview(null);
       
       await response.wait();
-      addSystemMessageProxy(`✅ Transaction confirmed! You sent **${amount} ${coin}** to **${recipientName}**. [View on Explorer](${getExplorerUrl(txHash)})`);
+      addSystemMessageProxy(`Transaction confirmed! You sent **${amount} ${coin}** to **${recipientName}**. [View on Explorer](${getExplorerUrl(txHash)})`);
       
       saveTransaction({
         type: 'send',
@@ -390,7 +406,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
     } catch (err: any) {
       console.error('Transaction Error:', err);
-      addSystemMessage(`❌ Error: ${err.message || 'Transaction failed'}`);
+      addSystemMessage(`Error: ${err.message || 'Transaction failed'}`);
       
       if (txHash && preview) {
         saveTransaction({
@@ -414,7 +430,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
     }
 
     try {
-      addSystemMessageProxy(`⏳ Preparing swap of **${swapPreview.fromAmount} ${swapPreview.fromToken}** for **${swapPreview.toToken}**...`);
+      addSystemMessageProxy(`Preparing swap of **${swapPreview.fromAmount} ${swapPreview.fromToken}** for **${swapPreview.toToken}**...`);
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
@@ -440,9 +456,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       const minAmountOut = 0; // In production, use slippage
 
       if (!isFromEth) {
-        addSystemMessageProxy(`🔐 Checking allowance for **${swapPreview.fromToken}**...`);
+        addSystemMessageProxy(`Checking allowance for **${swapPreview.fromToken}**...`);
         await approveToken(swapPreview.fromTokenAddress, amountIn);
-        addSystemMessageProxy(`✅ Token approved! Please sign the swap transaction...`);
+        addSystemMessageProxy(`Token approved! Please sign the swap transaction...`);
       }
 
       if (isFromEth) {
@@ -454,7 +470,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       }
 
       const txHash = tx.hash;
-      addSystemMessageProxy(`📡 Swap broadcasted! **Hash**: ${txHash.slice(0, 10)}... (Status: **Pending**)`);
+      addSystemMessageProxy(`Swap broadcasted! Hash: ${txHash.slice(0, 10)}... (Status: Pending)`);
 
       saveTransaction({
         type: 'swap',
@@ -468,7 +484,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       });
 
       await tx.wait();
-      addSystemMessageProxy(`✅ Swap successful! You received **${parseFloat(swapPreview.toAmount).toFixed(4)} ${swapPreview.toToken}**. [View on Explorer](${getExplorerUrl(txHash)})`);
+      addSystemMessageProxy(`Swap successful! You received **${parseFloat(swapPreview.toAmount).toFixed(4)} ${swapPreview.toToken}**. [View on Explorer](${getExplorerUrl(txHash)})`);
       
       saveTransaction({
         type: 'swap',
@@ -487,7 +503,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
     } catch (err: any) {
       console.error('Swap Error:', err);
-      addSystemMessageProxy(`❌ Swap failed: ${err.message}`);
+      addSystemMessageProxy(`Swap failed: ${err.message}`);
       
       saveTransaction({
         type: 'swap',
@@ -511,7 +527,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         const addr = parts[2];
         if (ethers.isAddress(addr)) {
           addContact(name, addr);
-          addSystemMessage(`✅ Saved **${name}** as ${addr.slice(0, 6)}...${addr.slice(-4)}. You can now send funds to ${name} directly by name.`);
+          addSystemMessage(`Saved **${name}** as ${addr.slice(0, 6)}...${addr.slice(-4)}. You can now send funds to ${name} directly by name.`);
           setRightPanelView('contacts');
           return;
         }
@@ -521,7 +537,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         const name = content.replace(/delete contact /i, '').trim();
         if (contacts[name]) {
           removeContact(name);
-          addSystemMessage(`🗑️ Removed **${name}** from your address book.`);
+          addSystemMessage(`Removed **${name}** from your address book.`);
           setRightPanelView('contacts');
           return;
         }
@@ -553,13 +569,11 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
     }
   }, [wallet.isConnected, connectWallet]);
 
-  const handleSaveSettings = (newKey: string, newToken: string) => {
+  const handleSaveSettings = (newKey: string) => {
     setApiKey(newKey);
-    setCryptoPanicToken(newToken);
     localStorage.setItem('groq_api_key', newKey);
-    localStorage.setItem('cryptopanic_token', newToken);
-    if (newKey || newToken) {
-      addSystemMessageProxy('✅ Settings saved! I am now ready to chat and fetch news.');
+    if (newKey) {
+      addSystemMessageProxy('Settings saved! I am now ready to chat and fetch news.');
     }
   };
 
@@ -587,10 +601,11 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--bg-main)',
-        color: 'var(--text-main)',
-        overflow: 'hidden',
       }}
     >
+      {showScanline && <div className="scanline" />}
+      {showWalletAnim && <WalletConnectAnimation />}
+
       <TopBar
         wallet={wallet}
         prices={prices}
@@ -651,12 +666,10 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
           activeCoin={activeCoin}
           onAnalysisComplete={handleAnalysisComplete}
           newsData={newsData}
-          panicNewsData={panicNewsData}
           fearGreedData={fearGreedData}
           newsLoading={newsLoading}
           newsError={newsError}
           newsLastUpdated={newsLastUpdated}
-          cryptoPanicToken={cryptoPanicToken}
           futuresBalance={futuresBalance}
           futuresPositions={futuresPositions}
           onCloseFuturesPosition={(id) => {
@@ -681,7 +694,6 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
       {settingsOpen && (
         <SettingsModal
           apiKey={apiKey}
-          cryptoPanicToken={cryptoPanicToken}
           onSave={handleSaveSettings}
           onClose={() => setSettingsOpen(false)}
         />

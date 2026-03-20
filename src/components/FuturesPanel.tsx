@@ -1,5 +1,7 @@
 import React from 'react';
+import { AlertTriangle, History, BarChart3 } from 'lucide-react';
 import type { FuturesPosition } from '../types';
+import { AnimatedNumber } from './AnimatedNumber';
 
 interface FuturesPanelProps {
   balance: number;
@@ -41,27 +43,33 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Account Summary */}
       <div className="glass-card" style={{ padding: '16px', border: '1px solid rgba(0, 212, 255, 0.2)' }}>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase' }}>
-          Paper Futures Account
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase' }}>
+          <BarChart3 size={12} /> Paper Futures Account
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Balance</div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>
+              <AnimatedNumber value={balance} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+            </div>
           </div>
           <div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Total PnL</div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: totalPnL >= 0 ? '#10b981' : '#ef4444' }}>
-              {totalPnL >= 0 ? '+' : '-'}${Math.abs(totalPnL).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div style={{ fontSize: '16px', fontWeight: 700, color: totalPnL >= 0 ? '#10ff88' : '#ff3366' }}>
+              {totalPnL >= 0 ? '+' : '-'}<AnimatedNumber value={Math.abs(totalPnL)} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
             </div>
           </div>
           <div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Margin Used</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>${marginUsed.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>
+              <AnimatedNumber value={marginUsed} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+            </div>
           </div>
           <div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Available</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#00d4ff' }}>${(balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: '#00d4ff' }}>
+              <AnimatedNumber value={balance} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+            </div>
           </div>
         </div>
       </div>
@@ -104,38 +112,37 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
                       <span style={{ 
                         fontSize: '11px', 
                         fontWeight: 700, 
-                        color: pos.direction === 'long' ? '#10b981' : '#ef4444',
-                        background: pos.direction === 'long' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: pos.direction === 'long' ? '#10ff88' : '#ff3366',
+                        background: pos.direction === 'long' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 51, 102, 0.1)',
                         padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
                         {pos.direction.toUpperCase()} {pos.leverage}x
                       </span>
                       <span style={{ fontWeight: 700, fontSize: '14px' }}>{pos.coin}</span>
-                      {isCloseToLiq && <span title="Close to liquidation!" style={{ fontSize: '14px' }}>⚠️</span>}
+                      {isCloseToLiq && <span title="Close to liquidation!" style={{ display: 'flex', alignItems: 'center', color: '#ff3366' }}><AlertTriangle size={14} /></span>}
                     </div>
                     <div style={{ 
                       fontSize: '14px', 
                       fontWeight: 700, 
-                      color: pnl >= 0 ? '#10b981' : '#ef4444',
-                      fontFamily: 'JetBrains Mono'
+                      color: pnl >= 0 ? '#10ff88' : '#ff3366',
                     }}>
-                      {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
+                      {pnl >= 0 ? '+' : ''}<AnimatedNumber value={pnlPercent} format={(n) => `${n.toFixed(2)}%`} />
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div className="mono" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
                     <div>
                       Entry: <span style={{ color: '#e2e8f0' }}>${pos.entryPrice.toLocaleString()}</span>
                     </div>
                     <div>
-                      Current: <span style={{ color: '#e2e8f0' }}>${currentPrice.toLocaleString()}</span>
+                      Current: <span style={{ color: '#00d4ff' }}><AnimatedNumber value={currentPrice} format={(n) => `$${n.toLocaleString()}`} /></span>
                     </div>
                     <div>
-                      Liq Price: <span style={{ color: pos.direction === 'long' ? '#ef4444' : '#10b981' }}>${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                      Liq Price: <span style={{ color: pos.direction === 'long' ? '#ff3366' : '#10ff88' }}>${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </div>
                     <div>
-                      PnL: <span style={{ color: pnl >= 0 ? '#10b981' : '#ef4444' }}>{pnl >= 0 ? '+' : '-'}${Math.abs(pnl).toFixed(2)}</span>
+                      PnL: <span style={{ color: pnl >= 0 ? '#10ff88' : '#ff3366' }}>{pnl >= 0 ? '+' : '-'}<AnimatedNumber value={Math.abs(pnl)} format={(n) => `$${n.toFixed(2)}`} /></span>
                     </div>
                   </div>
 
@@ -165,8 +172,8 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
 
       {/* History */}
       <div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>
-          History
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>
+          <History size={14} /> History
         </div>
         {closedPositions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '11px' }}>
