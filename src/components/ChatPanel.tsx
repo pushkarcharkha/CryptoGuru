@@ -3,387 +3,392 @@ import { Trash2, Bot, User, BarChart2, Flame, ShieldAlert, Zap, Send } from 'luc
 import type { Message } from '../types';
 
 interface ChatPanelProps {
-  messages: Message[];
-  isLoading: boolean;
-  onSendMessage: (content: string) => void;
-  onClearChat: () => void;
+    messages: Message[];
+    isLoading: boolean;
+    onSendMessage: (content: string) => void;
+    onClearChat: () => void;
 }
 
 // Simple markdown renderer for bold and links
 function renderMarkdown(text: string): React.ReactNode[] {
-  const lines = text.split('\n');
-  return lines.map((line, li) => {
-    const parts: React.ReactNode[] = [];
-    let remaining = line;
-    let key = 0;
+    const lines = text.split('\n');
+    return lines.map((line, li) => {
+        const parts: React.ReactNode[] = [];
+        let remaining = line;
+        let key = 0;
 
-    // Combined regex for bold (**text**) and links ([text](url))
-    // We'll process them in order of appearance
-    while (remaining.length > 0) {
-      const boldMatch = /\*\*([^*]+)\*\*/.exec(remaining);
-      const linkMatch = /\[([^\]]+)\]\(([^)]+)\)/.exec(remaining);
+        // Combined regex for bold (**text**) and links ([text](url))
+        // We'll process them in order of appearance
+        while (remaining.length > 0) {
+            const boldMatch = /\*\*([^*]+)\*\*/.exec(remaining);
+            const linkMatch = /\[([^\]]+)\]\(([^)]+)\)/.exec(remaining);
 
-      const boldIndex = boldMatch ? boldMatch.index : Infinity;
-      const linkIndex = linkMatch ? linkMatch.index : Infinity;
+            const boldIndex = boldMatch ? boldMatch.index : Infinity;
+            const linkIndex = linkMatch ? linkMatch.index : Infinity;
 
-      if (!boldMatch && !linkMatch) {
-         parts.push(<span key={key++}>{remaining}</span>);
-         break;
-      }
+            if (!boldMatch && !linkMatch) {
+                parts.push(<span key={key++}>{remaining}</span>);
+                break;
+            }
 
-      if (boldIndex < linkIndex) {
-        // Handle bold
-        if (boldIndex > 0) parts.push(<span key={key++}>{remaining.slice(0, boldIndex)}</span>);
-        parts.push(<strong key={key++} style={{ color: '#00d4ff' }}>{boldMatch![1]}</strong>);
-        remaining = remaining.slice(boldIndex + boldMatch![0].length);
-      } else {
-        // Handle link
-        if (linkIndex > 0) parts.push(<span key={key++}>{remaining.slice(0, linkIndex)}</span>);
-        parts.push(
-          <a 
-            key={key++} 
-            href={linkMatch![2]} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ color: '#00ff88', textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            {linkMatch![1]}
-          </a>
+            if (boldIndex < linkIndex) {
+                // Handle bold
+                if (boldIndex > 0) parts.push(<span key={key++}>{remaining.slice(0, boldIndex)}</span>);
+                parts.push(<strong key={key++} style={{ color: '#00d4ff' }}>{boldMatch![1]}</strong>);
+                remaining = remaining.slice(boldIndex + boldMatch![0].length);
+            } else {
+                // Handle link
+                if (linkIndex > 0) parts.push(<span key={key++}>{remaining.slice(0, linkIndex)}</span>);
+                parts.push(
+                    <a
+                        key={key++}
+                        href={linkMatch![2]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#00ff88', textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                        {linkMatch![1]}
+                    </a>
+                );
+                remaining = remaining.slice(linkIndex + linkMatch![0].length);
+            }
+        }
+
+        return (
+            <React.Fragment key={li}>
+                {li > 0 && <br />}
+                {parts}
+            </React.Fragment>
         );
-        remaining = remaining.slice(linkIndex + linkMatch![0].length);
-      }
-    }
-
-    return (
-      <React.Fragment key={li}>
-        {li > 0 && <br />}
-        {parts}
-      </React.Fragment>
-    );
-  });
+    });
 }
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 // Track which messages have been animated so they don't re-animate on re-render / tab switch
 const animatedMessageIds = new Set<string>();
 
 const TypewriterMessage = ({ messageId, content }: { messageId: string, content: string }) => {
-  const isNew = !animatedMessageIds.has(messageId);
-  const [displayed, setDisplayed] = useState(isNew ? '' : content);
+    const isNew = !animatedMessageIds.has(messageId);
+    const [displayed, setDisplayed] = useState(isNew ? '' : content);
 
-  useEffect(() => {
-    if (!isNew) {
-      setDisplayed(content);
-      return;
-    }
+    useEffect(() => {
+        if (!isNew) {
+            setDisplayed(content);
+            return;
+        }
 
-    animatedMessageIds.add(messageId);
-    let i = 0;
-    const interval = setInterval(() => {
-      setDisplayed(content.slice(0, i));
-      i++;
-      if (i > content.length) clearInterval(interval);
-    }, 15);
-    return () => clearInterval(interval);
-  }, [content, isNew, messageId]);
+        animatedMessageIds.add(messageId);
+        let i = 0;
+        const interval = setInterval(() => {
+            setDisplayed(content.slice(0, i));
+            i++;
+            if (i > content.length) clearInterval(interval);
+        }, 15);
+        return () => clearInterval(interval);
+    }, [content, isNew, messageId]);
 
-  return <>{renderMarkdown(displayed)}</>;
+    return <>{renderMarkdown(displayed)}</>;
 };
 
 const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat }) => {
-  const [input, setInput] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [input, setInput] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
 
-  const handleSend = () => {
-    if (!input.trim() || isLoading) return;
-    onSendMessage(input);
-    setInput('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-  };
+    const handleSend = () => {
+        if (!input.trim() || isLoading) return;
+        onSendMessage(input);
+        setInput('');
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
+    };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-  };
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInput(e.target.value);
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+    };
 
-  const QUICK_ACTIONS = [
-    { label: 'BTC Analysis', icon: <BarChart2 size={14} />, msg: 'Give me a quick BTC analysis — current trend, support/resistance, and what to watch.' },
-    { label: 'Top Movers', icon: <Flame size={14} />, msg: 'What are the top crypto movers today and should I be paying attention to any of them?' },
-    { label: 'Risk Check', icon: <ShieldAlert size={14} />, msg: 'What are the biggest risks in the crypto market right now I should know about?' },
-    { label: 'Opportunity', icon: <Zap size={14} />, msg: 'What\'s the best risk/reward opportunity in crypto right now?' },
-  ];
+    const QUICK_ACTIONS = [
+        { label: 'BTC Analysis', icon: <BarChart2 size={14} />, msg: 'Give me a quick BTC analysis — current trend, support/resistance, and what to watch.' },
+        { label: 'Top Movers', icon: <Flame size={14} />, msg: 'What are the top crypto movers today and should I be paying attention to any of them?' },
+        { label: 'Risk Check', icon: <ShieldAlert size={14} />, msg: 'What are the biggest risks in the crypto market right now I should know about?' },
+        { label: 'Opportunity', icon: <Zap size={14} />, msg: 'What\'s the best risk/reward opportunity in crypto right now?' },
+    ];
 
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--bg-primary)',
-        overflow: 'hidden',
-        position: 'relative',
-      }}
-    >
-      {/* Chat Header */}
-      <div
-        style={{
-          padding: '12px 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              background: '#00ff88',
-              boxShadow: '0 0 10px #00ff88',
-            }}
-          />
-          <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-            Cryptoguru AI — llama-3.3-70b-versatile
-          </span>
-        </div>
-        <button
-          id="clear-chat-btn"
-          onClick={onClearChat}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-muted)',
-            fontSize: '12px',
-            padding: '4px 8px',
-            borderRadius: '6px',
-            transition: 'all 0.2s',
-            fontFamily: 'Inter, sans-serif',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#ff4466';
-            e.currentTarget.style.background = 'rgba(255,68,102,0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--text-muted)';
-            e.currentTarget.style.background = 'none';
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Trash2 size={14} /> Clear
-          </span>
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div
-        id="chat-messages"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
-      >
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className="message-enter"
-            style={{
-              display: 'flex',
-              flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-              gap: '10px',
-              alignItems: 'flex-start',
-            }}
-          >
-            {/* Avatar */}
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                flexShrink: 0,
-                background:
-                  msg.role === 'assistant'
-                    ? 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))'
-                    : 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,255,136,0.1))',
-                border: `1px solid ${msg.role === 'assistant' ? 'rgba(0,212,255,0.3)' : 'rgba(0,212,255,0.2)'}`,
-              }}
-            >
-              {msg.role === 'assistant' ? <Bot size={18} color="#00d4ff" /> : <User size={18} color="#00ff88" />}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '82%' }}>
-              <div className={msg.role === 'assistant' ? 'msg-ai' : 'msg-user'}>
-                {msg.role === 'assistant' 
-                  ? <TypewriterMessage messageId={msg.id} content={msg.content} />
-                  : renderMarkdown(msg.content)}
-              </div>
-              <div
-                style={{
-                  fontSize: '10px',
-                  color: 'var(--text-muted)',
-                  textAlign: msg.role === 'user' ? 'right' : 'left',
-                  fontFamily: 'JetBrains Mono, monospace',
-                }}
-              >
-                {formatTime(msg.timestamp)}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Typing Indicator */}
-        {isLoading && (
-          <div className="message-enter" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                flexShrink: 0,
-                background: 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))',
-                border: '1px solid rgba(0,212,255,0.3)',
-              }}
-            >
-              <Bot size={18} color="#00d4ff" />
-            </div>
-            <div
-              className="msg-ai"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '14px 16px' }}
-            >
-              <div className="dot-pulse" style={{ display: 'flex', gap: '4px' }}>
-                <span />
-                <span />
-                <span />
-              </div>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                Analyzing...
-              </span>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Quick Actions */}
-      {messages.length <= 2 && (
+    return (
         <div
-          className="fade-in"
-          style={{
-            padding: '0 20px 12px',
-            display: 'flex',
-            gap: '8px',
-            flexWrap: 'wrap',
-            flexShrink: 0,
-          }}
+            style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'var(--bg-primary)',
+                overflow: 'hidden',
+                position: 'relative',
+            }}
         >
-          {QUICK_ACTIONS.map((qa) => (
-            <button
-              key={qa.label}
-              onClick={() => onSendMessage(qa.msg)}
-              style={{
-                background: 'rgba(0,212,255,0.06)',
-                border: '1px solid rgba(0,212,255,0.15)',
-                borderRadius: '20px',
-                padding: '6px 14px',
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontFamily: 'Inter, sans-serif',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0,212,255,0.15)';
-                e.currentTarget.style.color = '#00d4ff';
-                e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(0,212,255,0.06)';
-                e.currentTarget.style.color = 'var(--text-secondary)';
-                e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)';
-              }}
+            {/* Chat Header */}
+            <div
+                style={{
+                    padding: '12px 20px',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexShrink: 0,
+                }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {qa.icon} {qa.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                        style={{
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            background: '#00ff88',
+                            boxShadow: '0 0 10px #00ff88',
+                        }}
+                    />
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                        Cryptoguru AI — llama-3.3-70b-versatile
+                    </span>
+                </div>
+                <button
+                    id="clear-chat-btn"
+                    onClick={onClearChat}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        fontSize: '12px',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        transition: 'all 0.2s',
+                        fontFamily: 'Inter, sans-serif',
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ff4466';
+                        e.currentTarget.style.background = 'rgba(255,68,102,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--text-muted)';
+                        e.currentTarget.style.background = 'none';
+                    }}
+                >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Trash2 size={14} /> Clear
+                    </span>
+                </button>
+            </div>
 
-      {/* Input Area */}
-      <div
-        style={{
-          padding: '16px 20px',
-          borderTop: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-          <textarea
-            ref={textareaRef}
-            id="chat-input"
-            className="chat-input"
-            value={input}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about crypto, request a chart analysis, or describe a trade..."
-            rows={1}
-            style={{ flex: 1, minHeight: '44px' }}
-            disabled={isLoading}
-          />
-          <button
-            id="send-btn"
-            className="send-btn"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            style={{ height: '44px', width: '46px', flexShrink: 0 }}
-          >
-            <Send size={18} color="white" />
-          </button>
+            {/* Messages */}
+            <div
+                id="chat-messages"
+                style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollBehavior: 'smooth',
+                    overscrollBehaviorY: 'contain',
+                    touchAction: 'pan-y',
+                    willChange: 'transform',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                }}
+            >
+                {messages.map((msg) => (
+                    <div
+                        key={msg.id}
+                        className="message-enter"
+                        style={{
+                            display: 'flex',
+                            flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                            gap: '10px',
+                            alignItems: 'flex-start',
+                        }}
+                    >
+                        {/* Avatar */}
+                        <div
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                background:
+                                    msg.role === 'assistant'
+                                        ? 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))'
+                                        : 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,255,136,0.1))',
+                                border: `1px solid ${msg.role === 'assistant' ? 'rgba(0,212,255,0.3)' : 'rgba(0,212,255,0.2)'}`,
+                            }}
+                        >
+                            {msg.role === 'assistant' ? <Bot size={18} color="#00d4ff" /> : <User size={18} color="#00ff88" />}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '82%' }}>
+                            <div className={msg.role === 'assistant' ? 'msg-ai' : 'msg-user'}>
+                                {msg.role === 'assistant'
+                                    ? <TypewriterMessage messageId={msg.id} content={msg.content} />
+                                    : renderMarkdown(msg.content)}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: '10px',
+                                    color: 'var(--text-muted)',
+                                    textAlign: msg.role === 'user' ? 'right' : 'left',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                }}
+                            >
+                                {formatTime(msg.timestamp)}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {/* Typing Indicator */}
+                {isLoading && (
+                    <div className="message-enter" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '14px',
+                                flexShrink: 0,
+                                background: 'linear-gradient(135deg, rgba(0,212,255,0.2), rgba(112,0,255,0.2))',
+                                border: '1px solid rgba(0,212,255,0.3)',
+                            }}
+                        >
+                            <Bot size={18} color="#00d4ff" />
+                        </div>
+                        <div
+                            className="msg-ai"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '14px 16px' }}
+                        >
+                            <div className="dot-pulse" style={{ display: 'flex', gap: '4px' }}>
+                                <span />
+                                <span />
+                                <span />
+                            </div>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '6px' }}>
+                                Analyzing...
+                            </span>
+                        </div>
+                    </div>
+                )}
+
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Actions */}
+            {messages.length <= 2 && (
+                <div
+                    className="fade-in"
+                    style={{
+                        padding: '0 20px 12px',
+                        display: 'flex',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        flexShrink: 0,
+                    }}
+                >
+                    {QUICK_ACTIONS.map((qa) => (
+                        <button
+                            key={qa.label}
+                            onClick={() => onSendMessage(qa.msg)}
+                            style={{
+                                background: 'rgba(0,212,255,0.06)',
+                                border: '1px solid rgba(0,212,255,0.15)',
+                                borderRadius: '20px',
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                color: 'var(--text-secondary)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                fontFamily: 'Inter, sans-serif',
+                                whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(0,212,255,0.15)';
+                                e.currentTarget.style.color = '#00d4ff';
+                                e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(0,212,255,0.06)';
+                                e.currentTarget.style.color = 'var(--text-secondary)';
+                                e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)';
+                            }}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {qa.icon} {qa.label}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Input Area */}
+            <div
+                style={{
+                    padding: '16px 20px',
+                    borderTop: '1px solid var(--border-subtle)',
+                    flexShrink: 0,
+                }}
+            >
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                    <textarea
+                        ref={textareaRef}
+                        id="chat-input"
+                        className="chat-input"
+                        value={input}
+                        onChange={handleTextareaChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Ask about crypto, request a chart analysis, or describe a trade..."
+                        rows={1}
+                        style={{ flex: 1, minHeight: '44px' }}
+                        disabled={isLoading}
+                    />
+                    <button
+                        id="send-btn"
+                        className="send-btn"
+                        onClick={handleSend}
+                        disabled={!input.trim() || isLoading}
+                        style={{ height: '44px', width: '46px', flexShrink: 0 }}
+                    >
+                        <Send size={18} color="white" />
+                    </button>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
+                    Press <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Enter</kbd> to send
+                    &nbsp;·&nbsp;
+                    <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Shift+Enter</kbd> for new line
+                </div>
+            </div>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
-          Press <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Enter</kbd> to send
-          &nbsp;·&nbsp;
-          <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Shift+Enter</kbd> for new line
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default ChatPanel;
