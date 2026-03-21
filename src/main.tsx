@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import LandingPage from './LandingPage.tsx'
+import PaymentPage from './PaymentPage.tsx'
 
 const Root = () => {
   const [path, setPath] = useState(window.location.pathname);
@@ -17,6 +18,20 @@ const Root = () => {
     window.history.pushState({}, '', '/app');
     setPath('/app');
   };
+
+  const openLanding = () => {
+    window.history.pushState({}, '', '/');
+    setPath('/');
+  };
+
+  if (path.startsWith('/payment/')) {
+    const planPath = path.replace('/payment/', '');
+    const plan = (planPath === 'free' || planPath === 'pro' || planPath === 'pro-plus') ? planPath : 'free';
+    const query = new URLSearchParams(window.location.search);
+    const billingParam = query.get('billing');
+    const billing = billingParam === 'yearly' ? 'yearly' : 'monthly';
+    return <PaymentPage plan={plan} billing={billing} onBack={openLanding} onLaunch={handleLaunch} />;
+  }
 
   if (path === '/app') {
     return <App />;

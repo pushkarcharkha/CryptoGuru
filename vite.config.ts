@@ -21,6 +21,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/cryptocompare/, ''),
       },
+      '/api/payments': {
+        target: 'http://localhost:8787',
+        changeOrigin: true,
+      },
     },
   },
 })
