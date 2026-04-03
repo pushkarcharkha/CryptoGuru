@@ -22,8 +22,8 @@ const Signup: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { data: { user }, error: signupError } = await supabase.auth.signUp({ 
-      email, 
+    const { data: { user }, error: signupError } = await supabase.auth.signUp({
+      email,
       password,
       options: { data: { full_name: name } }
     });
@@ -31,8 +31,8 @@ const Signup: React.FC = () => {
     if (signupError) {
       setError(signupError.message);
     } else if (user) {
-      const { error: dbError } = await supabase.from('user_data').insert({ 
-        id: user.id, 
+      const { error: dbError } = await supabase.from('user_data').insert({
+        id: user.id,
         plan: 'free',
         ai_prompts_used: 0,
         ai_prompts_reset_date: new Date().toISOString().split('T')[0]
@@ -53,16 +53,7 @@ const Signup: React.FC = () => {
     <div className="auth-page">
       <div className="auth-card-premium">
         <div className="auth-logo-section">
-          <img 
-            src={appLogo} 
-            alt="CryptoGuru" 
-            style={{ 
-              height: '120px', 
-              width: 'auto', 
-              marginBottom: '-20px', 
-              marginTop: '-40px' 
-            }} 
-          />
+          <img src={appLogo} alt="CryptoGuru" style={{ height: '80px', marginBottom: '12px' }} />
           <div className="auth-logo-text">CryptoGuru</div>
         </div>
 
