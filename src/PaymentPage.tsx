@@ -1,15 +1,10 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-react';
 
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+
 type PlanKey = 'free' | 'pro' | 'pro-plus';
 type Billing = 'monthly' | 'yearly';
-
-interface PaymentPageProps {
-    plan: PlanKey;
-    billing: Billing;
-    onBack: () => void;
-    onLaunch: () => void;
-}
 
 const planDetails: Record<PlanKey, { title: string; monthly: number; yearly: number; perks: string[] }> = {
     free: {
@@ -32,7 +27,14 @@ const planDetails: Record<PlanKey, { title: string; monthly: number; yearly: num
     },
 };
 
-export default function PaymentPage({ plan, billing, onBack, onLaunch }: PaymentPageProps) {
+export default function PaymentPage() {
+    const { plan: planParam } = useParams<{ plan: string }>();
+    const plan = (planParam === 'free' || planParam === 'pro' || planParam === 'pro-plus') ? (planParam as PlanKey) : 'free';
+    const location = useLocation();
+    const query = new URLSearchParams(location.search);
+    const billing: Billing = query.get('billing') === 'yearly' ? 'yearly' : 'monthly';
+    const navigate = useNavigate();
+
     const data = planDetails[plan];
     const amount = billing === 'yearly' ? data.yearly : data.monthly;
     const [loadingGateway, setLoadingGateway] = useState<boolean>(false);
@@ -40,6 +42,9 @@ export default function PaymentPage({ plan, billing, onBack, onLaunch }: Payment
     const paymentRequired = amount > 0;
 
     const title = useMemo(() => `${data.title} (${billing})`, [billing, data.title]);
+
+    const onBack = () => navigate('/');
+    const onLaunch = () => navigate('/app');
 
     const loadRazorpay = () =>
         new Promise<boolean>((resolve) => {

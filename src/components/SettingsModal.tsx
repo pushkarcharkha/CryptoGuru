@@ -86,65 +86,76 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ apiKey, onSave, onClose }
         </div>
 
         {/* API Key Section */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>
-            <Key size={14} /> Groq API Key
-          </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              id="api-key-input"
-              type={showKey ? 'text' : 'password'}
-              value={keyInput}
-              onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="gsk_..."
-              style={{
-                width: '100%',
-                background: 'rgba(0,0,0,0.3)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '10px',
-                padding: '12px 44px 12px 14px',
-                color: '#e2e8f0',
-                fontSize: '13px',
-                fontFamily: 'JetBrains Mono, monospace',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                boxSizing: 'border-box',
-              }}
-              onFocus={(e) => (e.target.style.borderColor = 'rgba(0,212,255,0.4)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--border-subtle)')}
-            />
-            <button
-              onClick={() => setShowKey(!showKey)}
-              style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--text-muted)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+        {import.meta.env.VITE_GROQ_API_KEY ? (
+          <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(0,255,136,0.05)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: '10px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--accent-green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Key size={14} /> AI Engine Active (System Key)
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Your terminal is using the system-configured Groq API key from environment variables.
+            </p>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Get a free API key at{' '}
-            <a
-              href="https://console.groq.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: '#00d4ff', textDecoration: 'none' }}
-            >
-              console.groq.com
-            </a>
-            . The key is stored locally in your browser only.
-          </p>
-        </div>
+        ) : (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>
+              <Key size={14} /> Groq API Key
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="api-key-input"
+                type={showKey ? 'text' : 'password'}
+                value={keyInput}
+                onChange={(e) => setKeyInput(e.target.value)}
+                placeholder="gsk_..."
+                style={{
+                  width: '100%',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  padding: '12px 44px 12px 14px',
+                  color: '#e2e8f0',
+                  fontSize: '13px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = 'rgba(0,212,255,0.4)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--border-subtle)')}
+              />
+              <button
+                onClick={() => setShowKey(!showKey)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+              Get a free API key at{' '}
+              <a
+                href="https://console.groq.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#00d4ff', textDecoration: 'none' }}
+              >
+                console.groq.com
+              </a>
+              . The key is stored locally in your browser only.
+            </p>
+          </div>
+        )}
 
 
 

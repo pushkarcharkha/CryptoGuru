@@ -19,6 +19,8 @@ import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
 import { ethers } from 'ethers';
+import { UpgradeModal } from './components/UpgradeModal';
+import { supabase } from './lib/supabase';
 
 function App() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -26,7 +28,7 @@ function App() {
     const [rightPanelView, setRightPanelView] = useState<RightPanelView>('prices');
     const [activeFeature, setActiveFeature] = useState<SidebarFeature | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('groq_api_key') || '');
+    const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('groq_api_key') || import.meta.env.VITE_GROQ_API_KEY || '');
     const [activeCoin, setActiveCoin] = useState<CoinGeckoCoin | null>(null);
     const [transactionPreview, setTransactionPreview] = useState<TransactionPreview | null>(null);
     const [swapPreview, setSwapPreview] = useState<SwapPreview | null>(null);
@@ -37,6 +39,19 @@ function App() {
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
     const prevWalletConnected = useRef(false);
+
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [userData, setUserData] = useState<{ id: string, email: string } | null>(null);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setUserData({ id: user.id, email: user.email || '' });
+            }
+        };
+        fetchUser();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => setShowScanline(false), 1500);
@@ -198,7 +213,7 @@ function App() {
                         addSystemMessageProxy(`Warning: ${lev}x leverage is extremely risky. A small price move against you will liquidate the position.`);
                     }
 
-                    const pos = openPosition(coin, direction as 'long' | 'short', lev, parseFloat(size), currentPrice);
+                    const pos = await openPosition(coin, direction as 'long' | 'short', lev, parseFloat(size), currentPrice);
                     setRightPanelView('futures');
                     setManualPanelOverride('futures');
                     addSystemMessageProxy(`Position Opened: ${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x\nEntry: $${pos.entryPrice.toLocaleString()}\nSize: $${pos.size}\nMargin: $${pos.margin.toFixed(2)}\nLiq Price: $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
@@ -223,7 +238,7 @@ function App() {
         }
     }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL]);
 
-    const { messages, isLoading, sendMessage, addSystemMessage, clearMessages } = useGroqChat(apiKey, handleAIAction);
+    const { messages, isLoading, sendMessage, addSystemMessage, clearMessages } = useGroqChat(apiKey, handleAIAction, () => setShowUpgradeModal(true));
 
     useEffect(() => {
         addSystemMessageRef.current = addSystemMessage;
@@ -638,13 +653,14 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             {showWalletAnim && <WalletConnectAnimation />}
 
             <TopBar
-                wallet={wallet}
                 prices={prices}
-                onConnectWallet={handleConnectWallet}
-                formatAddress={formatAddress}
+                wallet={wallet}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 onOpenExchange={handleOpenExchange}
+                onConnectWallet={handleConnectWallet}
+                onUpgrade={() => setShowUpgradeModal(true)}
+                formatAddress={formatAddress}
             />
 
             {/* Main Layout */}
@@ -729,12 +745,20 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 />
             )}
 
-            {/* Settings Modal */}
             {settingsOpen && (
                 <SettingsModal
                     apiKey={apiKey}
                     onSave={handleSaveSettings}
                     onClose={() => setSettingsOpen(false)}
+                />
+            )}
+
+            {/* Upgrade Modal */}
+            {showUpgradeModal && (
+                <UpgradeModal 
+                    onClose={() => setShowUpgradeModal(false)}
+                    userId={userData?.id}
+                    userEmail={userData?.email}
                 />
             )}
         </div>

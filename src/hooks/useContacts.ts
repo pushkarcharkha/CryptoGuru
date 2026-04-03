@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 
 export type ContactsMap = Record<string, string>;
 
@@ -6,39 +7,53 @@ export function useContacts() {
   const [contacts, setContacts] = useState<ContactsMap>({});
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('contacts');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.contacts) {
-          setContacts(parsed.contacts);
+    const fetchContacts = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data } = await supabase.from('contacts').select('*').eq('user_id', user.id);
+        if (data) {
+          const map: ContactsMap = {};
+          data.forEach(c => {
+            map[c.name.toLowerCase()] = c.address;
+          });
+          setContacts(map);
         }
+      } catch (e) {
+        console.error('Failed to load contacts', e);
       }
-    } catch (e) {
-      console.error('Failed to load contacts', e);
-    }
+    };
+    fetchContacts();
   }, []);
 
-  const saveContacts = useCallback((newContacts: ContactsMap) => {
+  const saveContacts = useCallback(async (newContacts: ContactsMap) => {
     setContacts(newContacts);
-    localStorage.setItem('contacts', JSON.stringify({ contacts: newContacts }));
   }, []);
 
-  const addContact = useCallback((name: string, address: string) => {
+  const addContact = useCallback(async (name: string, address: string) => {
     setContacts((prev) => {
-      const next = { ...prev, [name.toLowerCase()]: address };
-      localStorage.setItem('contacts', JSON.stringify({ contacts: next }));
-      return next;
+      return { ...prev, [name.toLowerCase()]: address };
+    });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    
+    await supabase.from('contacts').insert({
+      user_id: user.id,
+      name: name.toLowerCase(),
+      address
     });
   }, []);
 
-  const removeContact = useCallback((name: string) => {
+  const removeContact = useCallback(async (name: string) => {
     setContacts((prev) => {
       const next = { ...prev };
       delete next[name.toLowerCase()];
-      localStorage.setItem('contacts', JSON.stringify({ contacts: next }));
       return next;
     });
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('contacts').delete().eq('user_id', user.id).eq('name', name.toLowerCase());
   }, []);
 
   const getContact = useCallback((name: string) => {

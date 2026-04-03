@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CoinGeckoCoin } from '../types';
+import { supabase } from '../lib/supabase';
 
 const COINGECKO_URL = '/api/coingecko/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=true&price_change_percentage=24h';
 
-// Initial cache
 let globalCache: { data: CoinGeckoCoin[] | null; timestamp: number } = {
   data: null,
   timestamp: 0,
@@ -14,10 +14,19 @@ export const useWatchlist = () => {
   const [loading, setLoading] = useState(!globalCache.data);
   const [lastUpdated, setLastUpdated] = useState<number>(globalCache.timestamp);
   const [error, setError] = useState<string | null>(null);
-  const [watchlistIds, setWatchlistIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('watchlist');
-    return saved ? JSON.parse(saved) : ['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano'];
-  });
+  const [watchlistIds, setWatchlistIds] = useState<string[]>(['bitcoin', 'ethereum', 'solana', 'binancecoin', 'cardano']);
+
+  useEffect(() => {
+    const fetchWatchlist = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('watchlist').select('*').eq('user_id', user.id);
+      if (data && data.length > 0) {
+        setWatchlistIds(data.map((d: any) => d.coin_id));
+      }
+    };
+    fetchWatchlist();
+  }, []);
 
   const fetchCoins = useCallback(async (force = false) => {
     const now = Date.now();
@@ -57,14 +66,25 @@ export const useWatchlist = () => {
     return () => clearInterval(interval);
   }, [fetchCoins]);
 
-  const toggleWatchlist = useCallback((coinId: string) => {
-    setWatchlistIds(prev => {
-      const isWatched = prev.includes(coinId);
-      const next = isWatched ? prev.filter(id => id !== coinId) : [...prev, coinId];
-      localStorage.setItem('watchlist', JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const toggleWatchlist = useCallback(async (coinId: string) => {
+    const isWatched = watchlistIds.includes(coinId);
+    setWatchlistIds(prev => isWatched ? prev.filter(id => id !== coinId) : [...prev, coinId]);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (isWatched) {
+      await supabase.from('watchlist').delete().eq('user_id', user.id).eq('coin_id', coinId);
+    } else {
+      const coin = globalCache.data?.find(c => c.id === coinId);
+      await supabase.from('watchlist').insert({
+        user_id: user.id,
+        coin_id: coinId,
+        coin_symbol: coin?.symbol || coinId,
+        coin_name: coin?.name || coinId
+      });
+    }
+  }, [watchlistIds]);
 
   const isInWatchlist = useCallback((coinId: string) => {
     return watchlistIds.includes(coinId);

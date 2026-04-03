@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Message, PortfolioHolding, AppTransaction } from '../types';
 import { detectAgent, detectFuturesIntent, buildAgentPrompt } from '../agents';
+import { supabase } from '../lib/supabase';
 import type { AgentType, AgentContext } from '../agents';
 
-export function useGroqChat(apiKey: string, onActionDetected?: (action: string, params: Record<string, string>) => void | Promise<void>) {
+export function useGroqChat(apiKey: string, onActionDetected?: (action: string, params: Record<string, string>) => void | Promise<void>, onRequireUpgrade?: () => void) {
   const onActionDetectedRef = useRef(onActionDetected);
   
   useEffect(() => {
@@ -57,6 +58,47 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       }
     ) => {
       if (!content.trim() || isLoading) return;
+
+      // ── 0. Check Free Plan AI Prompt Limit ────────────────────────────
+      const checkPromptLimit = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return false;
+
+        const { data } = await supabase
+          .from('user_data')
+          .select('plan, ai_prompts_used, ai_prompts_reset_date')
+          .eq('id', user.id)
+          .single();
+
+        if (!data) return true;
+
+        const today = new Date().toISOString().split('T')[0];
+
+        // Reset counter if new day
+        if (data.ai_prompts_reset_date !== today) {
+          await supabase.from('user_data').update({
+            ai_prompts_used: 1,
+            ai_prompts_reset_date: today
+          }).eq('id', user.id);
+          return true;
+        }
+
+        // Block if free user exceeded 5 prompts
+        if (data.plan === 'free' && data.ai_prompts_used >= 5) {
+          if (onRequireUpgrade) onRequireUpgrade();
+          return false;
+        }
+
+        // Increment counter
+        await supabase.from('user_data').update({
+          ai_prompts_used: data.ai_prompts_used + 1
+        }).eq('id', user.id);
+
+        return true;
+      };
+
+      const allowed = await checkPromptLimit();
+      if (!allowed) return;
 
       const userMsg: Message = {
         id: `u-${Date.now()}`,
