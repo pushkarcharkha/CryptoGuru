@@ -11,11 +11,12 @@ import {
 
 gsap.registerPlugin(useGSAP);
 
-interface LandingProps {
-    onLaunch: () => void;
-}
+import { useNavigate } from 'react-router-dom';
 
-export default function LandingPage({ onLaunch }: LandingProps) {
+gsap.registerPlugin(useGSAP);
+
+export default function LandingPage() {
+    const navigate = useNavigate();
     const containerRef = useRef<HTMLDivElement>(null);
     const heroCanvasRef = useRef<HTMLDivElement>(null);
     const globeCanvasRef = useRef<HTMLDivElement>(null);
@@ -368,9 +369,10 @@ export default function LandingPage({ onLaunch }: LandingProps) {
     const ethPrice = prices.find(p => p.symbol === 'ETH')?.price || 2180;
     const billingType = yearly ? 'yearly' : 'monthly';
     const openPaymentPage = (plan: 'free' | 'pro' | 'pro-plus') => {
-        window.history.pushState({}, '', `/payment/${plan}?billing=${billingType}`);
-        window.dispatchEvent(new PopStateEvent('popstate'));
+        navigate(`/payment/${plan}?billing=${billingType}`);
     };
+
+    const handleLaunch = () => navigate('/app');
 
     return (
         <div ref={containerRef} className="landing-root" style={{ background: 'transparent', color: 'var(--text-primary)', overflowX: 'hidden' }}>
@@ -421,7 +423,7 @@ export default function LandingPage({ onLaunch }: LandingProps) {
                                 height: '56px',
                                 marginBottom: '20px'
                             }}
-                            onClick={onLaunch}
+                            onClick={handleLaunch}
                         > 
                             Launch App →
                         </button>
@@ -593,7 +595,7 @@ export default function LandingPage({ onLaunch }: LandingProps) {
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '40px' }}>
-                    <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto', padding: '16px 40px', fontSize: '18px' }} onClick={onLaunch}>
+                    <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto', padding: '16px 40px', fontSize: '18px' }} onClick={handleLaunch}>
                         Try it yourself <Rocket size={20} />
                     </button>
                 </div>
@@ -625,7 +627,7 @@ export default function LandingPage({ onLaunch }: LandingProps) {
                             <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={14} color="#00ff88" /> Watchlist</li>
                             <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={14} color="#00ff88" /> Paper trading</li>
                         </ul>
-                        <button className="btn-outline" style={{ marginTop: 'auto', width: '100%' }} onClick={onLaunch}>Get Started</button>
+                        <button className="btn-outline" style={{ marginTop: 'auto', width: '100%' }} onClick={handleLaunch}>Get Started</button>
                     </div>
 
                     <div className="pricing-card popular" style={{ position: 'relative', minHeight: '520px' }}>
@@ -692,7 +694,7 @@ export default function LandingPage({ onLaunch }: LandingProps) {
                 <h2 style={{ fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 800, marginBottom: '40px', maxWidth: '900px', margin: '0 auto 40px', lineHeight: 1.1 }}>
                     Ready to trade with an AI that actually thinks?
                 </h2>
-                <button className="btn-primary" style={{ padding: '20px 48px', fontSize: '20px', borderRadius: '12px', boxShadow: '0 0 40px rgba(0, 255, 136, 0.4)' }} onClick={onLaunch}>
+                <button className="btn-primary" style={{ padding: '20px 48px', fontSize: '20px', borderRadius: '12px', boxShadow: '0 0 40px rgba(0, 255, 136, 0.4)' }} onClick={handleLaunch}>
                     Launch Cryptoguru — It's Free →
                 </button>
                 <p style={{ color: '#888', marginTop: '24px', fontSize: '15px' }}>

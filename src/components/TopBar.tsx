@@ -1,15 +1,18 @@
-import { Bot, Radio, Wallet, ArrowRightLeft } from 'lucide-react';
-import type { WalletState, CryptoPrice } from '../types';
+import { Bot, Radio, ArrowRightLeft, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { CryptoPrice, WalletState } from '../types';
 import { AnimatedNumber } from './AnimatedNumber';
 import appLogo from '../assets/cryptoguru.png';
+import { supabase } from '../lib/supabase';
 
 interface TopBarProps {
   activeTab: 'agent' | 'signals';
   onTabChange: (tab: 'agent' | 'signals') => void;
   onOpenExchange: () => void;
-  wallet: WalletState;
   prices: CryptoPrice[];
+  wallet: WalletState;
   onConnectWallet: () => void;
+  onUpgrade: () => void;
   formatAddress: (addr: string) => string;
 }
 
@@ -17,16 +20,33 @@ const TopBar: React.FC<TopBarProps> = ({
   activeTab,
   onTabChange,
   onOpenExchange,
-  wallet,
   prices,
+  wallet,
   onConnectWallet,
+  onUpgrade,
   formatAddress,
 }) => {
-  // Calculate total USD balance
-  const totalUsdValue = wallet.isConnected ? wallet.holdings.reduce((sum, h) => {
-    const coinPrice = prices.find(p => p.symbol.toLowerCase() === h.symbol.toLowerCase());
-    return sum + (coinPrice ? h.amount * coinPrice.price : 0);
-  }, 0) : 0;
+  const [userEmail, setUserEmail] = useState('');
+  const [userPlan, setUserPlan] = useState('free');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || '');
+        const { data } = await supabase.from('user_data').select('plan').eq('id', user.id).single();
+        if (data) {
+          setUserPlan(data.plan);
+        }
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <div
       style={{
@@ -153,59 +173,59 @@ const TopBar: React.FC<TopBarProps> = ({
       </button>
       </div>
 
-      {/* Right: Wallet */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {wallet.isConnected && (
-          <div
-            className="fade-in mono"
-            style={{
-              padding: '6px 12px',
-              background: 'rgba(0, 255, 136, 0.08)',
-              border: '1px solid rgba(0, 255, 136, 0.2)',
-              borderRadius: '8px',
-              fontSize: '13px',
-              color: '#00ff88',
-              fontWeight: 600,
+      {/* Right: User Profile & Wallet */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="user-profile">
+        {userPlan === 'free' && (
+          <button 
+            onClick={onUpgrade}
+            style={{ 
+              background: 'linear-gradient(135deg, #00ff88, #00d4ff)', 
+              color: '#050508', 
+              padding: '6px 14px', 
+              borderRadius: '8px', 
+              fontSize: '12px', 
+              fontWeight: 800, 
+              border: 'none', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 0 15px rgba(0,255,136,0.3)'
             }}
           >
-            <AnimatedNumber
-              value={totalUsdValue}
-              format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            />
-          </div>
+            UPGRADE
+          </button>
         )}
-        <button
-          id="connect-wallet-btn"
-          className={`wallet-btn ${wallet.isConnected ? 'connected' : ''}`}
-          onClick={onConnectWallet}
-          disabled={wallet.isConnecting}
-        >
-          {wallet.isConnecting ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  border: '2px solid transparent',
-                  borderTopColor: '#00d4ff',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  display: 'inline-block',
-                }}
-              />
-              Connecting...
-            </span>
-          ) : wallet.isConnected && wallet.address ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="live-dot" />
-              <span className="mono">{formatAddress(wallet.address)}</span>
-            </span>
-          ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ display: 'flex', alignItems: 'center' }}><Wallet size={16} /></span> Connect Wallet
-            </span>
-          )}
-        </button>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="plan-badge" style={{ background: userPlan === 'free' ? '#333' : userPlan === 'pro' ? '#00ff88' : '#7000ff', color: userPlan === 'free' ? '#fff' : '#050508', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800 }}>
+                {userPlan === 'free' ? 'FREE' : userPlan === 'pro' ? 'PRO' : 'PRO+'}
+                </span>
+                <span className="user-email" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{userEmail.split('@')[0]}</span>
+             </div>
+             <button onClick={handleSignOut} style={{ background: 'transparent', border: 'none', padding: '0', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <LogOut size={10} /> Sign Out
+             </button>
+        </div>
+
+        <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }}></div>
+
+        {wallet.isConnected ? (
+          <button 
+            className="wallet-btn connected"
+            onClick={onConnectWallet}
+          >
+            {wallet.address ? formatAddress(wallet.address) : '...'}
+          </button>
+        ) : (
+          <button 
+            className="wallet-btn"
+            onClick={onConnectWallet}
+          >
+            CONNECT WALLET
+          </button>
+        )}
       </div>
 
       <style>{`

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, Settings } from 'lucide-react';
 import type { SidebarFeature } from '../types';
 
 interface SidebarProps {
