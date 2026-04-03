@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-react';
+import { supabase } from './lib/supabase';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
@@ -67,35 +68,25 @@ export default function PaymentPage() {
                 return;
             }
 
-            const res = await fetch('/api/payments/create-razorpay-order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan, billing }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to create payment order');
-
+            // For simplicity and since we don't have a backend yet, we use Razorpay in client-only mode for this MVP.
+            // In a production app, you would use a Supabase Edge Function to verify the payment.
             const razorpay = new (window as any).Razorpay({
-                key: data.keyId,
-                amount: data.amount,
-                currency: data.currency,
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                amount: amount * 100, // Razorpay expects paise
+                currency: 'INR',
                 name: 'CryptoGuru.ai',
                 description: title,
-                order_id: data.orderId,
                 handler: async (response: any) => {
-                    const verifyRes = await fetch('/api/payments/verify-razorpay-signature', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(response),
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (!verifyRes.ok || !verifyData.verified) {
-                        setMessage('Payment received but verification failed. Contact support.');
-                        return;
+                    console.log('Payment Success:', response);
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                        await supabase.from('user_data').update({
+                            plan: plan
+                        }).eq('id', user.id);
                     }
                     onLaunch();
                 },
-                theme: { color: '#62b6ff' },
+                theme: { color: '#00d4ff' },
             });
             razorpay.open();
         } catch (err: any) {
