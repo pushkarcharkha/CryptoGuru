@@ -33,9 +33,9 @@ export type RightPanelView =
     | 'watchlist'
     | 'contacts'
     | 'history'
-    | 'history'
     | 'news-sentiment'
-    | 'futures';
+    | 'futures'
+    | 'futures-confirm';
 
 export interface AppTransaction {
     id: string;
