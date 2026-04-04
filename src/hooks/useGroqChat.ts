@@ -133,7 +133,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       let pricesBlock = 'PRICES UNAVAILABLE';
       try {
         const coinIds = 'bitcoin,ethereum,solana,binancecoin,cardano,avalanche-2,chainlink,polkadot,tether,usd-coin,ripple';
-        const priceRes = await fetch(`/api/coingecko/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`);
+        const priceRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`);
         if (priceRes.ok) {
           const d = await priceRes.json().catch(() => ({}));
           const format = (id: string, name: string) => d[id] ? `${name}: $${d[id].usd} (${d[id].usd_24h_change?.toFixed(2)}%)` : `${name}: N/A`;
