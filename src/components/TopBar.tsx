@@ -48,36 +48,18 @@ const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <div
-      style={{
-        background: 'var(--bg-panel)',
-        borderBottom: '1px solid var(--border-subtle)',
-        padding: '0 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: '64px',
-        flexShrink: 0,
-        position: 'relative',
-        zIndex: 10,
-      }}
-    >
+    <div className="topbar-root">
       {/* Left: Logo */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <img
           src={appLogo}
           alt="Cryptoguru"
-          style={{
-            height: '150px',
-            width: 'auto',
-            objectFit: 'contain',
-            display: 'block',
-          }}
+          className="topbar-logo"
         />
       </div>
 
-      {/* Scrolling ticker */}
-      <div style={{ flex: 1, overflow: 'hidden', margin: '0 20px', maskImage: 'linear-gradient(90deg, transparent, white 5%, white 95%, transparent)' }}>
+      {/* Scrolling ticker — hidden on mobile */}
+      <div className="topbar-ticker">
         <div className="ticker-content" style={{ display: 'flex', gap: '24px', fontSize: '12px', whiteSpace: 'nowrap' }}>
           {prices && prices.map(p => (
             <span key={p.id}>
@@ -89,7 +71,6 @@ const TopBar: React.FC<TopBarProps> = ({
               />
             </span>
           ))}
-          {/* Duplicate for infinite effect */}
           {prices && prices.map(p => (
             <span key={`dup-${p.id}`}>
               <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>{p.symbol}</span>
@@ -104,133 +85,51 @@ const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Center: Tabs */}
-      <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '4px' }}>
-        <button
-          id="tab-exchange"
-          onClick={onOpenExchange}
-          style={{
-            padding: '6px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            fontSize: '13px',
-            transition: 'all 0.2s ease',
-            background: 'transparent',
-            color: 'var(--text-secondary)',
-            boxShadow: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <ArrowRightLeft size={16} /> Exchange
+      <div className="topbar-tabs">
+        <button id="tab-exchange" onClick={onOpenExchange} className="topbar-tab-btn">
+          <ArrowRightLeft size={16} /> <span className="topbar-tab-label">Exchange</span>
         </button>
-        <button
-          id="tab-agent"
-          onClick={() => onTabChange('agent')}
-          style={{
-            padding: '6px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            fontSize: '13px',
-            transition: 'all 0.2s ease',
-            background: activeTab === 'agent' ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25))' : 'transparent',
-          color: activeTab === 'agent' ? '#00d4ff' : 'var(--text-secondary)',
-          boxShadow: activeTab === 'agent' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-      >
-        <Bot size={16} /> AI Agent
-      </button>
-        <button
-          id="tab-signals"
-          onClick={() => onTabChange('signals')}
-          style={{
-            padding: '6px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            fontSize: '13px',
-            transition: 'all 0.2s ease',
-            background: activeTab === 'signals' ? 'linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25))' : 'transparent',
-          color: activeTab === 'signals' ? '#00d4ff' : 'var(--text-secondary)',
-          boxShadow: activeTab === 'signals' ? '0 0 12px rgba(0,212,255,0.2)' : 'none',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-      >
-        <Radio size={16} /> Signal Feed
-      </button>
+        <button id="tab-agent" onClick={() => onTabChange('agent')} className={`topbar-tab-btn ${activeTab === 'agent' ? 'active' : ''}`}>
+          <Bot size={16} /> <span className="topbar-tab-label">AI Agent</span>
+        </button>
+        <button id="tab-signals" onClick={() => onTabChange('signals')} className={`topbar-tab-btn ${activeTab === 'signals' ? 'active' : ''}`}>
+          <Radio size={16} /> <span className="topbar-tab-label">Signals</span>
+        </button>
       </div>
 
       {/* Right: User Profile & Wallet */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="user-profile">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }} className="topbar-right">
         {userPlan === 'free' && (
-          <button 
-            onClick={onUpgrade}
-            style={{ 
-              background: 'linear-gradient(135deg, #00ff88, #00d4ff)', 
-              color: '#050508', 
-              padding: '6px 14px', 
-              borderRadius: '8px', 
-              fontSize: '12px', 
-              fontWeight: 800, 
-              border: 'none', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 0 15px rgba(0,255,136,0.3)'
-            }}
-          >
-            UPGRADE
-          </button>
+          <button onClick={onUpgrade} className="topbar-upgrade-btn">UPGRADE</button>
         )}
         
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="plan-badge" style={{ background: userPlan === 'free' ? '#333' : userPlan === 'pro' ? '#00ff88' : '#7000ff', color: userPlan === 'free' ? '#fff' : '#050508', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800 }}>
-                {userPlan === 'free' ? 'FREE' : userPlan === 'pro' ? 'PRO' : 'PRO+'}
-                </span>
-                <span className="user-email" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{userEmail.split('@')[0]}</span>
-             </div>
-             <button onClick={handleSignOut} style={{ background: 'transparent', border: 'none', padding: '0', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <LogOut size={10} /> Sign Out
-             </button>
+        <div className="topbar-user-info">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className="plan-badge" style={{ background: userPlan === 'free' ? '#333' : userPlan === 'pro' ? '#00ff88' : '#7000ff', color: userPlan === 'free' ? '#fff' : '#050508', padding: '2px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 800 }}>
+              {userPlan === 'free' ? 'FREE' : userPlan === 'pro' ? 'PRO' : 'PRO+'}
+            </span>
+            <span className="topbar-email" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{userEmail.split('@')[0]}</span>
+          </div>
+          <button onClick={handleSignOut} style={{ background: 'transparent', border: 'none', padding: '0', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <LogOut size={10} /> Sign Out
+          </button>
         </div>
 
-        <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }}></div>
+        <div className="topbar-divider" style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }}></div>
 
         {wallet.isConnected ? (
-          <button 
-            className="wallet-btn connected"
-            onClick={onConnectWallet}
-          >
+          <button className="wallet-btn connected" onClick={onConnectWallet}>
             {wallet.address ? formatAddress(wallet.address) : '...'}
           </button>
         ) : (
-          <button 
-            className="wallet-btn"
-            onClick={onConnectWallet}
-          >
-            CONNECT WALLET
+          <button className="wallet-btn" onClick={onConnectWallet}>
+            <span className="topbar-wallet-full">CONNECT WALLET</span>
+            <span className="topbar-wallet-short">CONNECT</span>
           </button>
         )}
       </div>
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
