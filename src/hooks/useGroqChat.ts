@@ -55,6 +55,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       } | null,
       options?: {
         allowActions?: boolean;
+        hidden?: boolean;
       }
     ) => {
       if (!content.trim() || isLoading) return;
@@ -107,7 +108,9 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, userMsg]);
+      if (!options?.hidden) {
+        setMessages((prev) => [...prev, userMsg]);
+      }
       setIsLoading(true);
 
       if (!apiKey) {
@@ -258,10 +261,14 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
     setMessages((prev) => [...prev, { id: `sys-${Date.now()}`, role: 'assistant', content, timestamp: new Date() }]);
   }, []);
 
+  const addUserMessage = useCallback((content: string) => {
+    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: 'user', content, timestamp: new Date() }]);
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([{ id: 'reset', role: 'assistant', content: "Chat cleared. Ask me anything!", timestamp: new Date() }]);
     setLastAgent(null);
   }, []);
 
-  return { messages, isLoading, sendMessage, addSystemMessage, clearMessages, lastAgent };
+  return { messages, isLoading, sendMessage, addSystemMessage, addUserMessage, clearMessages, lastAgent };
 }

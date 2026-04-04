@@ -102,6 +102,7 @@ const OPEN_KEYWORDS = [
   'open a position', 'open position',
   'yes open', 'yes, open', 'confirm', 'go ahead',
   'yes do it', 'yes please', 'do it', 'proceed',
+  'long ', 'short ', 'leverage ', 'size '
 ];
 
 const CLOSE_KEYWORDS = [

@@ -60,6 +60,9 @@ interface RightPanelProps {
     futuresPositions?: FuturesPosition[];
     onCloseFuturesPosition?: (id: number, currentPrice: number) => void;
     futuresPrices?: Record<string, { usd: number }> | null;
+    pendingFuturesPosition?: any | null;
+    onConfirmFutures?: () => void;
+    onDeclineFutures?: () => void;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -74,33 +77,79 @@ function formatChange(n: number | null | undefined) {
     return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 }
 
-const Sparkline = ({ data, color }: { data: number[]; color: string }) => {
-    if (!data || data.length === 0) return null;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min;
-    const width = 60;
-    const height = 24;
+const Row = ({ label, value, color = '#e2e8f0' }: {label: string, value: string, color?: string}) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+    <span style={{ color: '#8888aa' }}>{label}</span>
+    <span style={{ color, fontWeight: '600', fontFamily: 'JetBrains Mono' }}>{value}</span>
+  </div>
+);
 
-    const points = data.map((d, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - ((d - min) / (range || 1)) * height;
-        return `${x},${y}`;
-    }).join(' ');
+const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => (
+  <div style={{
+    background: '#111128',
+    border: '1px solid #1a1a3a',
+    borderRadius: '12px',
+    padding: '20px',
+    margin: '12px'
+  }}>
+    <h3 style={{ color: '#00ff88', marginBottom: '16px' }}>
+      Position Preview
+    </h3>
+    
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+      <Row label="Coin" value={position.coin} />
+      <Row label="Direction" value={position.direction.toUpperCase()} 
+        color={position.direction === 'long' ? '#00ff88' : '#ff3366'} />
+      <Row label="Leverage" value={`${position.leverage}x`} />
+      <Row label="Size" value={`$${position.size}`} />
+      <Row label="Entry Price" value={`$${position.entryPrice}`} />
+      <Row label="Margin Used" value={`$${position.margin}`} />
+      <Row label="Liquidation Price" value={`$${position.liquidationPrice}`} 
+        color="#ff3366" />
+    </div>
 
-    return (
-        <svg width={width} height={height} style={{ overflow: 'visible' }}>
-            <polyline
-                fill="none"
-                stroke={color}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={points}
-            />
-        </svg>
-    );
-};
+    {position.leverage >= 20 && (
+      <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '12px' }}>
+        ⚠️ High leverage — {position.leverage}x means a {(100/position.leverage).toFixed(1)}% move against you will liquidate this position.
+      </p>
+    )}
+
+    <div style={{ display: 'flex', gap: '10px' }}>
+      <button
+        onClick={onConfirm}
+        style={{
+          flex: 1,
+          background: 'rgba(0,255,136,0.1)',
+          border: '1px solid #00ff88',
+          color: '#00ff88',
+          padding: '12px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        ✓ Confirm
+      </button>
+      <button
+        onClick={onDecline}
+        style={{
+          flex: 1,
+          background: 'rgba(255,51,102,0.1)',
+          border: '1px solid #ff3366',
+          color: '#ff3366',
+          padding: '12px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        ✕ Decline
+      </button>
+    </div>
+  </div>
+);
+
+
 
 const RightPanel: React.FC<RightPanelProps> = ({
     view,
@@ -134,6 +183,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
     futuresPositions,
     onCloseFuturesPosition,
     futuresPrices,
+    pendingFuturesPosition,
+    onConfirmFutures,
+    onDeclineFutures,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -311,57 +363,77 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 )}
 
                 {/* ===== COIN CHART VIEW (TRADINGVIEW) ===== */}
-                {view === 'coin-chart' && activeCoin && (
+                {view === 'coin-chart' && (
                     <div className="panel-content fade-in">
-                        <div className="glass-card" style={{ padding: '16px', marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                <img src={activeCoin.image} alt={activeCoin.name} style={{ width: '32px', height: '32px' }} />
-                                <div>
-                                    <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>{activeCoin.name} ({activeCoin.symbol.toUpperCase()})</div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '14px', color: '#00d4ff' }}>
-                                            <AnimatedNumber value={activeCoin.current_price} format={(n) => formatPrice(n)} />
-                                        </span>
-                                        <span style={{ fontSize: '12px', fontWeight: 600, color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366' }}>
-                                            <AnimatedNumber value={activeCoin.price_change_percentage_24h} format={(n) => formatChange(n)} />
-                                        </span>
+                        {!activeCoin ? (
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                gap: '12px',
+                                opacity: 0.5
+                            }}>
+                                <span style={{ fontSize: '40px' }}>📊</span>
+                                <p style={{ color: '#5555aa', fontSize: '14px', textAlign: 'center', margin: 0 }}>
+                                    Ask me to analyze a coin
+                                </p>
+                                <p style={{ color: '#5555aa', fontSize: '12px', margin: 0 }}>
+                                    e.g. "analyze BTC" or "show ETH chart"
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="glass-card" style={{ padding: '16px', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                    <img src={activeCoin.image} alt={activeCoin.name} style={{ width: '32px', height: '32px' }} />
+                                    <div>
+                                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>{activeCoin.name} ({activeCoin.symbol.toUpperCase()})</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '14px', color: '#00d4ff' }}>
+                                                <AnimatedNumber value={activeCoin.current_price} format={(n) => formatPrice(n)} />
+                                            </span>
+                                            <span style={{ fontSize: '12px', fontWeight: 600, color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366' }}>
+                                                <AnimatedNumber value={activeCoin.price_change_percentage_24h} format={(n) => formatChange(n)} />
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <div style={{ height: '420px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
+                                    <TechnicalAnalysisChart
+                                        coinId={activeCoin.id}
+                                        coinSymbol={activeCoin.symbol}
+                                        onAnalysisComplete={onAnalysisComplete}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={onBackToWatchlist}
+                                    className="btn-secondary"
+                                    style={{ width: '100%', marginBottom: '12px' }}
+                                >
+                                    ← Back to Watchlist
+                                </button>
+
+                                <button
+                                    onClick={() => onToggleWatchlist?.(activeCoin.id)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '10px',
+                                        background: isInWatchlist?.(activeCoin.id) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                        border: `1px solid ${isInWatchlist?.(activeCoin.id) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                                        color: isInWatchlist?.(activeCoin.id) ? '#ef4444' : '#10b981',
+                                        fontWeight: 600,
+                                        fontSize: '13px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {isInWatchlist?.(activeCoin.id) ? '✕ Remove from Watchlist' : '+ Add to Watchlist'}
+                                </button>
                             </div>
-
-                            <div style={{ height: '420px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '16px' }}>
-                                <TechnicalAnalysisChart
-                                    coinId={activeCoin.id}
-                                    coinSymbol={activeCoin.symbol}
-                                    onAnalysisComplete={onAnalysisComplete}
-                                />
-                            </div>
-
-                            <button
-                                onClick={onBackToWatchlist}
-                                className="btn-secondary"
-                                style={{ width: '100%', marginBottom: '12px' }}
-                            >
-                                ← Back to Watchlist
-                            </button>
-
-                            <button
-                                onClick={() => onToggleWatchlist?.(activeCoin.id)}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    borderRadius: '10px',
-                                    background: (activeCoin && isInWatchlist?.(activeCoin.id)) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                    border: `1px solid ${(activeCoin && isInWatchlist?.(activeCoin.id)) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
-                                    color: (activeCoin && isInWatchlist?.(activeCoin.id)) ? '#ef4444' : '#10b981',
-                                    fontWeight: 600,
-                                    fontSize: '13px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                {(activeCoin && isInWatchlist?.(activeCoin.id)) ? '✕ Remove from Watchlist' : '+ Add to Watchlist'}
-                            </button>
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -634,47 +706,60 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                             key={coin.id}
                                             className="glass-card"
                                             style={{
-                                                padding: '12px',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '10px'
+                                                justifyContent: 'space-between',
+                                                padding: '10px 12px',
+                                                cursor: 'pointer',
+                                                marginBottom: '8px'
                                             }}
                                             onClick={() => onCoinClick?.(coin)}
                                             onMouseEnter={(e) => e.currentTarget.style.borderColor = 'rgba(0,212,255,0.3)'}
                                             onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
                                         >
-                                            <img src={coin.image} alt={coin.name} style={{ width: '28px', height: '28px' }} />
+                                            {/* Left - coin info */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <img src={coin.image} alt={coin.symbol} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                                                <div>
+                                                    <p style={{ color: '#e8e8ff', fontSize: '13px', fontWeight: '600', margin: 0 }}>{coin.symbol.toUpperCase()}</p>
+                                                    <p style={{ color: '#5555aa', fontSize: '11px', margin: 0 }}>{coin.name}</p>
+                                                </div>
+                                            </div>
 
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontWeight: 600, fontSize: '13px', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                        {coin.name}
-                                                    </span>
-                                                    <Sparkline
-                                                        data={coin.sparkline_in_7d?.price || []}
-                                                        color={(coin.price_change_percentage_24h || 0) >= 0 ? '#10b981' : '#ef4444'}
-                                                    />
+                                            {/* Right - price + add button */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <p style={{ color: '#e8e8ff', fontSize: '13px', fontFamily: 'JetBrains Mono', margin: 0 }}>
+                                                        <AnimatedNumber value={coin.current_price} format={(n) => formatPrice(n)} />
+                                                    </p>
+                                                    <p style={{ 
+                                                        color: (coin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366',
+                                                        fontSize: '11px',
+                                                        margin: 0
+                                                    }}>
+                                                        <AnimatedNumber value={coin.price_change_percentage_24h} format={(n) => formatChange(n)} />
+                                                    </p>
                                                 </div>
 
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                                                        {coin.symbol}
-                                                    </span>
-                                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: '12px', color: '#e2e8f0' }}>
-                                                            <AnimatedNumber value={coin.current_price} format={(n) => formatPrice(n)} />
-                                                        </span>
-                                                        <span style={{
-                                                            fontSize: '10px',
-                                                            fontWeight: 700,
-                                                            color: coin.price_change_percentage_24h >= 0 ? '#10ff88' : '#ff3366'
-                                                        }}>
-                                                            <AnimatedNumber value={coin.price_change_percentage_24h} format={(n) => formatChange(n)} />
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                                {/* ADD / REMOVE BUTTON */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onToggleWatchlist?.(coin.id)
+                                                    }}
+                                                    style={{
+                                                        background: isInWatchlist?.(coin.id) ? 'rgba(255,51,102,0.1)' : 'rgba(0,255,136,0.1)',
+                                                        border: `1px solid ${isInWatchlist?.(coin.id) ? '#ff3366' : '#00ff88'}`,
+                                                        color: isInWatchlist?.(coin.id) ? '#ff3366' : '#00ff88',
+                                                        borderRadius: '6px',
+                                                        padding: '4px 10px',
+                                                        fontSize: '12px',
+                                                        cursor: 'pointer',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    {isInWatchlist?.(coin.id) ? '− Remove' : '+ Add'}
+                                                </button>
                                             </div>
                                         </div>
                                     ))
@@ -801,6 +886,15 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         positions={futuresPositions || []}
                         onClosePosition={onCloseFuturesPosition || (() => { })}
                         prices={futuresPrices || {}}
+                    />
+                )}
+
+                {/* ===== FUTURES CONFIRM VIEW ===== */}
+                {view === 'futures-confirm' && pendingFuturesPosition && (
+                    <FuturesConfirmCard
+                        position={pendingFuturesPosition}
+                        onConfirm={onConfirmFutures}
+                        onDecline={onDeclineFutures}
                     />
                 )}
             </div>
