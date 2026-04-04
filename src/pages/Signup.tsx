@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Mail, Lock, User, Chrome, AlertCircle, ArrowRight } from 'lucide-react';
+import { Chrome, AlertCircle, ArrowRight } from 'lucide-react';
 import appLogo from '../assets/cryptoguru.png';
 
 const Signup: React.FC = () => {
