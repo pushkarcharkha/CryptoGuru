@@ -25,6 +25,7 @@ import { supabase } from './lib/supabase';
 function App() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'agent' | 'signals'>('agent');
+    const [mobileView, setMobileView] = useState<'chat' | 'panel'>('chat');
     const [rightPanelView, setRightPanelView] = useState<RightPanelView>('prices');
     const [activeFeature, setActiveFeature] = useState<SidebarFeature | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -150,6 +151,7 @@ function App() {
                     });
                     setRightPanelView('swap');
                     setManualPanelOverride('swap');
+                    setMobileView('panel');
                     addSystemMessageProxy(`Quote received! You'll get approx **${parseFloat(estimatedOutput).toFixed(4)} ${toToken.toUpperCase()}**. Review and confirm on the right.`);
                 } catch (err: any) {
                     addSystemMessageProxy(`Swap Error: ${err.message}`);
@@ -173,6 +175,7 @@ function App() {
                 setActiveCoin(coin);
                 setRightPanelView('coin-chart');
                 setManualPanelOverride('coin-chart');
+                setMobileView('panel');
                 addSystemMessageProxy(`Analyzing **${coin.name}** chart...`);
             } else {
                 addSystemMessageProxy(`Sorry, I couldn't find a chart for **${coinId}** to analyze.`);
@@ -185,6 +188,7 @@ function App() {
                     setActiveCoin(coin);
                     setRightPanelView('coin-chart');
                     setManualPanelOverride('coin-chart');
+                    setMobileView('panel');
                     addSystemMessageProxy(`Opening **${coin.name}** chart...`);
                 } else {
                     addSystemMessageProxy(`Sorry, I couldn't find a chart for **${coinId}**.`);
@@ -194,11 +198,13 @@ function App() {
             const { view } = params;
             if (view === 'watchlist') {
                 setPanelSafe('watchlist');
+                setMobileView('panel');
                 addSystemMessageProxy(`Opening your watchlist.`);
             }
         } else if (action === 'SHOW_NEWS') {
             setRightPanelView('news-sentiment');
             setManualPanelOverride('news-sentiment'); // Hard override when showing news
+            setMobileView('panel');
             addSystemMessageProxy(`Opening Market News & Sentiment...`);
         } else if (action === 'FUTURES_OPEN') {
             const { coin, direction, leverage, size } = params;
@@ -216,6 +222,7 @@ function App() {
                     const pos = await openPosition(coin, direction as 'long' | 'short', lev, parseFloat(size), currentPrice);
                     setRightPanelView('futures');
                     setManualPanelOverride('futures');
+                    setMobileView('panel');
                     addSystemMessageProxy(`Position Opened: ${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x\nEntry: $${pos.entryPrice.toLocaleString()}\nSize: $${pos.size}\nMargin: $${pos.margin.toFixed(2)}\nLiq Price: $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
                 } catch (err: any) {
                     addSystemMessageProxy(`Failed to open position: ${err.message}`);
@@ -281,6 +288,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             balance: futuresBalance,
             positions: futuresPositions
         }, 'chart', stats);
+        setMobileView('chat');
     }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions]);
 
     // Handle sidebar feature click → preset message + panel update
@@ -546,6 +554,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     addContact(name, addr);
                     addSystemMessage(`Saved **${name}** as ${addr.slice(0, 6)}...${addr.slice(-4)}. You can now send funds to ${name} directly by name.`);
                     setRightPanelView('contacts');
+                    setMobileView('panel');
                     return;
                 }
             }
@@ -642,6 +651,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
     return (
         <div
+            className="app-root-wrapper"
             style={{
                 height: '100vh',
                 display: 'flex',
@@ -664,8 +674,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             />
 
             {/* Main Layout */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div className={`app-main-layout mobile-view-${mobileView}`} style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Sidebar */}
+                <div className="app-sidebar">
                 <Sidebar
                     isOpen={sidebarOpen}
                     onToggle={() => setSidebarOpen((v) => !v)}
@@ -673,20 +684,24 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     onFeatureClick={handleFeatureClick}
                     onSettingsClick={() => setSettingsOpen(true)}
                 />
+                </div>
 
                 {/* Center Panel */}
-                {activeTab === 'agent' ? (
-                    <ChatPanel
-                        messages={messages}
-                        isLoading={isLoading}
-                        onSendMessage={handleSendMessage}
-                        onClearChat={clearMessages}
-                    />
-                ) : (
-                    <SignalFeed onSignalClick={handleSignalClick} onAnalyzeClick={handleSignalAnalyzeOnly} />
-                )}
+                <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                    {activeTab === 'agent' ? (
+                        <ChatPanel
+                            messages={messages}
+                            isLoading={isLoading}
+                            onSendMessage={(msg) => { handleSendMessage(msg); setMobileView('chat'); }}
+                            onClearChat={clearMessages}
+                        />
+                    ) : (
+                        <SignalFeed onSignalClick={handleSignalClick} onAnalyzeClick={handleSignalAnalyzeOnly} />
+                    )}
+                </div>
 
                 {/* Right Panel */}
+                <div className="app-right-panel">
                 <RightPanel
                     view={rightPanelView}
                     prices={prices}
@@ -729,7 +744,49 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     }}
                     futuresPrices={futuresPricesMap}
                 />
+                
+                {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
+                <div className="mobile-quick-chat-container">
+                    <input 
+                        type="text" 
+                        placeholder="Type a command (e.g. short BTC 10x)..."
+                        className="mobile-quick-chat-input"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                handleSendMessage(e.currentTarget.value.trim());
+                                e.currentTarget.value = '';
+                                setMobileView('chat');
+                            }
+                        }}
+                    />
+                    <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
+                        &#10148;
+                    </div>
+                </div>
+
+                </div>
             </div>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="app-bottom-nav">
+                {[{ id: 'chat', icon: '💬', label: 'Chat' }, { id: 'portfolio', icon: '💼', label: 'Portfolio' }, { id: 'watchlist', icon: '👁️', label: 'Watch' }, { id: 'chart', icon: '📊', label: 'Charts' }, { id: 'news-sentiment', icon: '📡', label: 'News' }, { id: 'futures', icon: '⚡', label: 'Futures' }].map(f => (
+                    <button
+                        key={f.id}
+                        className={`app-bottom-nav-btn ${(f.id === 'chat' && mobileView === 'chat') || (mobileView === 'panel' && activeFeature === f.id) || (mobileView === 'panel' && f.id === 'portfolio' && !activeFeature) ? 'active' : ''}`}
+                        onClick={() => {
+                            if (f.id === 'chat') {
+                                setMobileView('chat');
+                            } else {
+                                setMobileView('panel');
+                                handleFeatureClick(f.id as any, '');
+                            }
+                        }}
+                    >
+                        <span style={{ fontSize: '18px' }}>{f.icon}</span>
+                        {f.label}
+                    </button>
+                ))}
+            </nav>
 
             {watchlistCoin && (
                 <ChartModal

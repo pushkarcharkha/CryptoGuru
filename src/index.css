@@ -1253,6 +1253,7 @@ body {
     font-weight: 800;
     background: linear-gradient(135deg, #fff 0%, #aaa 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.02em;
 }
@@ -1400,3 +1401,374 @@ body {
     align-items: center;
     gap: 10px;
 }
+
+/* ===== TOPBAR RESPONSIVE CLASSES ===== */
+.topbar-root {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    gap: 12px;
+}
+
+.topbar-logo {
+    height: 150px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.topbar-ticker {
+    flex: 1;
+    overflow: hidden;
+    margin: 0 12px;
+    mask-image: linear-gradient(90deg, transparent, white 5%, white 95%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, white 5%, white 95%, transparent);
+    min-width: 0;
+}
+
+.topbar-tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 4px;
+    flex-shrink: 0;
+}
+
+.topbar-tab-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.topbar-tab-btn.active {
+    background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25));
+    color: #00d4ff;
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+}
+
+.topbar-upgrade-btn {
+    background: linear-gradient(135deg, #00ff88, #00d4ff);
+    color: #050508;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 0 15px rgba(0,255,136,0.3);
+}
+
+.topbar-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.topbar-wallet-short { display: none; }
+.topbar-wallet-full { display: inline; }
+
+/* ===== APP LAYOUT: MOBILE BOTTOM NAV ===== */
+.app-bottom-nav {
+    display: none;
+}
+
+/* === MAIN APP LAYOUT (DESKTOP) === */
+.app-right-panel {
+    width: 400px;
+    min-width: 400px;
+    max-width: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-quick-chat-container {
+    display: none;
+}
+
+/* ===== FULL RESPONSIVE MEDIA QUERIES ===== */
+
+/* --- TABLET (≤1024px) --- */
+@media (max-width: 1024px) {
+    /* Landing */
+    .hero-prices {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 8px !important;
+        justify-content: center;
+    }
+    .timeline-line { display: none; }
+    .how-it-works > div:last-child { flex-direction: column; }
+    .pricing-card.popular { transform: scale(1.02); }
+
+    /* TopBar */
+    .topbar-ticker { display: none; }
+    .topbar-logo { height: 100px; }
+    .topbar-tab-label { display: none; }
+    .topbar-tabs { gap: 2px; padding: 4px; }
+    .topbar-tab-btn { padding: 6px 10px; }
+
+    /* Auth card */
+    .auth-card-premium { padding: 36px 28px; }
+}
+
+/* --- MOBILE LARGE (≤768px) --- */
+@media (max-width: 768px) {
+    /* === TOPBAR === */
+    .topbar-root {
+        padding: 0 12px;
+        height: 56px;
+        gap: 6px;
+    }
+    .topbar-logo { height: 70px; }
+    .topbar-user-info { display: none; }
+    .topbar-divider { display: none; }
+    .topbar-upgrade-btn { padding: 5px 8px; font-size: 10px; }
+    .topbar-wallet-full { display: none; }
+    .topbar-wallet-short { display: inline; }
+    .wallet-btn { padding: 6px 10px; font-size: 11px; }
+
+    /* === MAIN APP LAYOUT === */
+    /* Sidebar collapses completely, replaced by bottom nav */
+    .app-sidebar {
+        display: none !important;
+    }
+
+    /* Main content area */
+    .app-main-layout {
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    /* Use Mobile Views to toggle Chat vs Panel fully */
+    .app-main-layout.mobile-view-chat .app-chat-panel {
+        display: flex !important;
+        flex: 1;
+        height: 100%;
+        min-height: unset;
+    }
+    .app-main-layout.mobile-view-chat .app-right-panel {
+        display: none !important;
+    }
+
+    .app-main-layout.mobile-view-panel .app-right-panel {
+        display: flex !important;
+        flex: 1;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100%;
+        max-height: none !important;
+        border-left: none !important;
+    }
+    .app-main-layout.mobile-view-panel .app-chat-panel {
+        display: none !important;
+    }
+
+    /* Bottom navigation bar */
+    .app-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-panel);
+        border-top: 1px solid var(--border-subtle);
+        z-index: 100;
+        padding: 6px 0 env(safe-area-inset-bottom, 6px);
+    }
+
+    .app-bottom-nav-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 6px 4px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        transition: color 0.2s;
+    }
+
+    .app-bottom-nav-btn.active {
+        color: var(--accent-cyan);
+    }
+
+    /* Add padding to main content to account for bottom nav */
+    .app-root-wrapper {
+        padding-bottom: 60px;
+    }
+
+    /* === LANDING PAGE === */
+    .landing-hero {
+        padding: 0 16px !important;
+    }
+
+    .hero-prices {
+        flex-direction: column !important;
+        gap: 6px !important;
+        padding: 12px 16px !important;
+        border-radius: 12px;
+    }
+
+    .hero-prices span { gap: 6px !important; }
+
+    .landing-ticker { display: none !important; }
+
+    .section { padding: 48px 5% !important; }
+
+    .feature-card { padding: 20px; }
+
+    .how-it-works > div:last-child {
+        flex-direction: column !important;
+        gap: 16px;
+    }
+
+    .pricing-card { margin-bottom: 16px; }
+    .pricing-card.popular { transform: scale(1); }
+
+    /* Terminal window */
+    .terminal-window { margin: 0 !important; }
+
+    /* === PAYMENT PAGE === */
+    .payment-grid { grid-template-columns: 1fr !important; }
+    .payment-page-root { padding: 24px 4% !important; }
+
+    /* === AUTH === */
+    .auth-card-premium {
+        padding: 28px 20px;
+        border-radius: 16px;
+    }
+    .auth-logo-text { font-size: 24px; }
+
+    /* === MODAL / OVERLAYS === */
+    .settings-modal-inner {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        overflow-y: auto;
+    }
+    .exchange-modal-inner {
+        width: 95vw !important;
+    }
+
+    /* Sticky Chat Bar for Mobile Panels */
+    .mobile-quick-chat-container {
+        display: block !important;
+        padding: 12px;
+        background: var(--bg-panel);
+        border-top: 1px solid var(--border-subtle);
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
+        flex-shrink: 0;
+    }
+    .mobile-quick-chat-input {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        border-radius: 20px;
+        padding: 10px 36px 10px 16px;
+        color: #fff;
+        font-size: 13px;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .mobile-quick-chat-input:focus {
+        border-color: #00d4ff;
+        background: rgba(0, 212, 255, 0.05);
+    }
+    .mobile-quick-chat-input::placeholder {
+        color: var(--text-muted);
+    }
+}
+
+/* --- MOBILE SMALL (≤480px) --- */
+@media (max-width: 480px) {
+    .topbar-root { padding: 0 8px; height: 52px; }
+    .topbar-logo { height: 55px; }
+    .topbar-tabs { gap: 0; }
+    .topbar-tab-btn { padding: 6px 8px; }
+    .topbar-upgrade-btn { display: none; }
+
+    /* Landing page */
+    .btn-primary, .btn-outline {
+        padding: 10px 20px !important;
+        font-size: 15px !important;
+    }
+
+    .landing-hero > div:nth-child(2) > div:last-child {
+        flex-direction: column !important;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .landing-hero > div:nth-child(2) > div:last-child > button {
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    .hero-badge {
+        font-size: 11px;
+        padding: 6px 12px;
+    }
+
+    /* Section headings */
+    h2 { font-size: clamp(24px, 7vw, 40px) !important; }
+    h3 { font-size: clamp(18px, 5vw, 28px) !important; }
+
+    /* Pricing */
+    .pricing-card { padding: 20px 16px; }
+
+    /* Chat messages */
+    .msg-ai, .msg-user { max-width: 95%; font-size: 13px; }
+
+    /* Auth */
+    .auth-card-premium { padding: 24px 16px; margin: 12px; }
+    .auth-logo-section img { height: 60px !important; }
+
+    /* App layout */
+    .app-right-panel { max-height: 50vh; }
+}
+
+/* --- LANDSCAPE PHONE FIX --- */
+@media (max-height: 500px) and (orientation: landscape) {
+    .topbar-root { height: 48px; }
+    .topbar-logo { height: 44px; }
+    .app-right-panel { max-height: 35vh; }
+    .landing-hero { height: auto !important; min-height: 100vh; padding: 60px 5% !important; }
+}
+
+/* --- LARGE DESKTOP (≥1440px) --- */
+@media (min-width: 1440px) {
+    .topbar-logo { height: 160px; }
+    .topbar-tab-btn { padding: 6px 20px; font-size: 14px; }
+}
+
