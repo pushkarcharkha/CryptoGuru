@@ -50,7 +50,7 @@ export const TechnicalAnalysisChart = ({
     }
 
     const response = await fetch(
-      `/api/coingecko/coins/${cid}/ohlc?vs_currency=usd&days=${days}`
+      `https://api.coingecko.com/api/v3/coins/${cid}/ohlc?vs_currency=usd&days=${days}`
     );
     
     if (response.status === 429) {

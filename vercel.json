@@ -2,18 +2,6 @@
   "version": 2,
   "rewrites": [
     {
-      "source": "/api/coingecko/(.*)",
-      "destination": "https://api.coingecko.com/api/v3/$1"
-    },
-    {
-      "source": "/api/cryptopanic/(.*)",
-      "destination": "https://cryptopanic.com/api/$1"
-    },
-    {
-      "source": "/api/cryptocompare/(.*)",
-      "destination": "https://min-api.cryptocompare.com/$1"
-    },
-    {
       "source": "/api/payments/(.*)",
       "destination": "/api/payments.js"
     },
