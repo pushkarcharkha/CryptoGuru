@@ -899,6 +899,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 <ExchangeModal
                     prices={prices}
                     onClose={() => setExchangeOpen(false)}
+                    walletAddress={wallet.address || undefined}
+                    email={userData?.email || undefined}
+                    addMessage={addSystemMessageProxy}
                 />
             )}
 
