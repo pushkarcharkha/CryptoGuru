@@ -214,6 +214,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
         <div
             className="right-panel-container"
             style={{
+                height: '100%',
                 background: 'var(--bg-panel)',
                 borderLeft: '1px solid var(--border-subtle)',
                 display: 'flex',
