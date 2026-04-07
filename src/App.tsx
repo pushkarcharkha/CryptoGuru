@@ -162,9 +162,15 @@ function App() {
                     addSystemMessageProxy(`Swap Error: ${err.message}`);
                 }
             }
+        } else if (action === 'ADD_CONTACT') {
+            const { name, address } = params;
+            if (name && address) {
+                addContact(name, address);
+            }
         } else if (action === 'WATCHLIST_ADD') {
             const { coinId } = params;
             if (coinId) {
+                toggleWatchlist(coinId);
                 addSystemMessageProxy(`Added **${coinId}** to your watchlist.`);
             }
         } else if (action === 'WATCHLIST_REMOVE') {
