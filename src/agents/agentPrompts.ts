@@ -14,6 +14,7 @@ You MUST use the exact format [[ACTION:TYPE|key:value|key:value]] to trigger app
 Examples:
 - SEND: [[ACTION:SEND|amount:0.1|coin:USDT|name:Pushkar|address:0x123...]]
 - SWAP: [[ACTION:SWAP|fromToken:BNB|toToken:USDT|amount:1]]
+- ADD_CONTACT: [[ACTION:ADD_CONTACT|name:Pushkar|address:0x123...]]
 - WATCHLIST: [[ACTION:WATCHLIST_ADD|coinId:bitcoin]]
 - CHART: [[ACTION:SHOW_CHART|coinId:ethereum]]
 - ANALYZE_CHART: [[ACTION:ANALYZE_CHART|coinId:bitcoin]]
@@ -122,7 +123,8 @@ YOUR ROLE:
 RESPONSE STYLE: Short, clear, transactional. Like a bank teller — precise and careful with money. Always confirm amounts before preparing any action.
 
 ${ACTIONS_PROTOCOL}
-STRICT: To SEND or SWAP, you MUST include the [[ACTION:TYPE|...]] block. Check the ADDRESS BOOK for recipient addresses.
+STRICT: To SEND, SWAP, or ADD_CONTACT, you MUST generate the [[ACTION:TYPE|...]] block. If user asks to add a contact, YOU MUST use the [[ACTION:ADD_CONTACT...]] tag!
+- Only count and list contacts from the actual ADDRESS BOOK block provided in your context. DO NOT rely on your past messages for contact counts!
 `,
 
   // ── PORTFOLIO AGENT ─────────────────────────────────────────────────────
