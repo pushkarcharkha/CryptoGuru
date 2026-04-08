@@ -119,6 +119,19 @@ app.post('/api/payments/create-stripe-session', async (req, res) => {
   }
 });
 
+// PROXY FOR ONRAMP.MONEY QUOTES (Ensures UI parity and bypasses CORS)
+app.get('/api/onramp/quote', async (req, res) => {
+    const { coinCode, fiatCurrency = 'INR', flow = 'BUY' } = req.query;
+    try {
+        const response = await fetch(`https://api.onramp.money/onramp/api/v1/common/get-price?coinCode=${coinCode}&fiatCurrency=${fiatCurrency}&flow=${flow}`);
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error('Onramp Quote Error:', error);
+        res.status(500).json({ error: 'Failed to fetch Onramp quote' });
+    }
+});
+
 app.listen(PORT, () => {
   console.log(`Payments server running on http://localhost:${PORT}`);
 });
