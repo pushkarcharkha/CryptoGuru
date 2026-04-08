@@ -46,7 +46,15 @@ const Signup: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + '/app' } });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({ 
+        provider: 'google', 
+        options: { redirectTo: window.location.origin + '/app' } 
+      });
+      if (error) setError(error.message);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during Google sign in');
+    }
   };
 
   return (
@@ -122,7 +130,7 @@ const Signup: React.FC = () => {
 
         <div className="auth-divider-premium"><span>Direct Link</span></div>
 
-        <button onClick={handleGoogleLogin} className="auth-google-btn">
+        <button type="button" onClick={handleGoogleLogin} className="auth-google-btn">
           <Chrome size={20} />
           Sign up with Google
         </button>

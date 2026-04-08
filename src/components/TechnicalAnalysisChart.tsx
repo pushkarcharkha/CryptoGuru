@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickSeries, LineSeries } from 'lightweight-charts';
-import type { UTCTimestamp } from 'lightweight-charts';
 
 // Global cache for OHLCV data to prevent rate limits
 const ohlcvCache: Record<string, { timestamp: number; data: any[] }> = {};
@@ -30,13 +28,9 @@ export const TechnicalAnalysisChart = ({
   coinSymbol,
   onAnalysisComplete 
 }: TechnicalAnalysisChartProps) => {
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<any>(null);
-  const [timeframe, setTimeframe] = useState(30); // days
+  const containerId = `tv_chart_${coinId.replace(/[^a-zA-Z0-9]/g, '')}`;
   const [isLoading, setIsLoading] = useState(false);
   
-  // Use a ref for the callback to prevent the chart from re-initializing 
-  // if App.tsx re-creates the handleAnalysisComplete function
   const onAnalysisCompleteRef = useRef(onAnalysisComplete);
   useEffect(() => {
     onAnalysisCompleteRef.current = onAnalysisComplete;
@@ -54,8 +48,6 @@ export const TechnicalAnalysisChart = ({
     );
     
     if (response.status === 429) {
-      // If we're being rate limited, wait and try to return something useful or throw
-      // For now, let's just wait 2 seconds if it fails
       await new Promise(resolve => setTimeout(resolve, 2000));
       return fetchOHLCV(cid, days);
     }
@@ -63,7 +55,7 @@ export const TechnicalAnalysisChart = ({
     if (!response.ok) throw new Error('Failed to fetch OHLCV');
     const data = await response.json();
     const formattedData = data.map((d: any) => ({
-      time: (d[0] / 1000) as UTCTimestamp,
+      time: (d[0] / 1000),
       open: d[1],
       high: d[2],
       low: d[3],
@@ -104,47 +96,47 @@ export const TechnicalAnalysisChart = ({
     return significantPoints.slice(-3);
   };
 
+  // 1. Initialize TradingView Widget for Visual Display
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    const timer = setTimeout(() => {
+      if ((window as any).TradingView && document.getElementById(containerId)) {
+        // Build an exchange symbol mapping based on the symbol provided by coingecko
+        const tvSymbol = `BINANCE:${coinSymbol.toUpperCase()}USDT`;
+        
+        new (window as any).TradingView.widget({
+          autosize: true,
+          symbol: tvSymbol,
+          interval: "D",
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1",
+          locale: "en",
+          container_id: containerId,
+          backgroundColor: "#0a0a0f",
+          gridColor: "#1a1a2e",
+          enable_publishing: false,
+          hide_top_toolbar: false,
+          hide_legend: false,
+          save_image: false,
+          hide_side_toolbar: false, // Enables the drawing tools!
+          allow_symbol_change: false,
+          studies: [
+            "EMA@tv-basicstudies",
+            "RSI@tv-basicstudies"
+          ]
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [coinSymbol, containerId]);
 
-    const container = chartContainerRef.current;
+  // 2. Fetch CoinGecko purely for the AI Chat context
+  useEffect(() => {
+    if (!onAnalysisCompleteRef.current) return;
     
-    const chart = createChart(container, {
-      width: container.clientWidth,
-      height: 400,
-      layout: {
-        background: { color: '#0a0a0f' },
-        textColor: '#ffffff',
-      },
-      grid: {
-        vertLines: { color: '#1a1a2e' },
-        horzLines: { color: '#1a1a2e' },
-      },
-      crosshair: { mode: 1 },
-      rightPriceScale: { borderColor: '#333' },
-      timeScale: { borderColor: '#333', timeVisible: true }
-    });
-
-    chartRef.current = chart;
-
-    const handleResize = () => {
-      chart.applyOptions({ width: container.clientWidth });
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#00ff88',
-      downColor: '#ff4444',
-      borderUpColor: '#00ff88',
-      borderDownColor: '#ff4444',
-      wickUpColor: '#00ff88',
-      wickDownColor: '#ff4444'
-    });
-
     setIsLoading(true);
-    fetchOHLCV(coinId, timeframe).then(candles => {
-      candleSeries.setData(candles);
+    fetchOHLCV(coinId, 30).then(candles => {
+      if (!candles || candles.length === 0) return;
 
       const closes = candles.map((c: any) => c.close);
       const highs = candles.map((c: any) => c.high);
@@ -154,69 +146,20 @@ export const TechnicalAnalysisChart = ({
       const supportValue = Math.min(...lows.slice(-20));
       const midLevel = (resistanceValue + supportValue) / 2;
 
-      const supportLine = chart.addSeries(LineSeries, {
-        color: '#00ff88',
-        lineWidth: 2,
-        lineStyle: 2,
-        title: `Sup $${supportValue.toFixed(0)}`
-      });
-      supportLine.setData([
-        { time: candles[Math.max(0, candles.length - 20)].time, value: supportValue },
-        { time: candles[candles.length - 1].time, value: supportValue }
-      ]);
-
-      const resistanceLine = chart.addSeries(LineSeries, {
-        color: '#ff4444',
-        lineWidth: 2,
-        lineStyle: 2,
-        title: `Res $${resistanceValue.toFixed(0)}`
-      });
-      resistanceLine.setData([
-        { time: candles[Math.max(0, candles.length - 20)].time, value: resistanceValue },
-        { time: candles[candles.length - 1].time, value: resistanceValue }
-      ]);
-
       const ema20Data = calculateEMA(closes, 20);
-      const ema20Series = chart.addSeries(LineSeries, {
-        color: '#f0a500',
-        lineWidth: 1,
-        title: 'EMA 20'
-      });
-      ema20Series.setData(candles.slice(-20).map((c: any, i: number) => ({
-        time: c.time,
-        value: ema20Data[ema20Data.length - 20 + i]
-      })));
-
       const ema50Data = calculateEMA(closes, 50);
-      const ema50Series = chart.addSeries(LineSeries, {
-        color: '#9c27b0',
-        lineWidth: 1,
-        title: 'EMA 50'
-      });
-      ema50Series.setData(candles.slice(-50).map((c: any, i: number) => ({
-        time: c.time,
-        value: ema50Data[ema50Data.length - 50 + i]
-      })));
 
       const trendlinePoints = findTrendlinePoints(candles, 'low');
       let trendlineValue: number | undefined = undefined;
       if (trendlinePoints.length >= 2) {
         trendlineValue = trendlinePoints[trendlinePoints.length - 1].value;
-        const trendline = chart.addSeries(LineSeries, {
-          color: '#00d4ff',
-          lineWidth: 2,
-          title: 'Trendline'
-        });
-        trendline.setData(trendlinePoints);
       }
 
-      const markers = [];
       let buyCount = 0;
       let sellCount = 0;
       for (let i = 1; i < 20; i++) {
         const idx = candles.length - 20 + i;
         if (idx < 1) continue;
-        
         const prevEma20 = ema20Data[idx - 1];
         const prevEma50 = ema50Data[idx - 1];
         const currEma20 = ema20Data[idx];
@@ -224,37 +167,9 @@ export const TechnicalAnalysisChart = ({
 
         if (prevEma20 < prevEma50 && currEma20 > currEma50) {
           buyCount++;
-          markers.push({
-            time: candles[idx].time,
-            position: 'belowBar' as const,
-            color: '#00ff88',
-            shape: 'arrowUp' as const,
-            text: 'Buy'
-          });
         }
         if (prevEma20 > prevEma50 && currEma20 < currEma50) {
           sellCount++;
-          markers.push({
-            time: candles[idx].time,
-            position: 'aboveBar' as const,
-            color: '#ff4444',
-            shape: 'arrowDown' as const,
-            text: 'Sell'
-          });
-        }
-      }
-      // In lightweight-charts v5, setMarkers moved to the chart instance
-      if (markers.length > 0) {
-        try {
-          // v5 API: chart.setMarkers(series, markers)
-          (chart as any).setMarkers(candleSeries, markers);
-        } catch {
-          // Fallback: try legacy API just in case
-          try {
-            (candleSeries as any).setMarkers(markers);
-          } catch {
-            console.warn('Markers not supported in this version of lightweight-charts');
-          }
         }
       }
 
@@ -278,45 +193,16 @@ export const TechnicalAnalysisChart = ({
       console.error(err);
       setIsLoading(false);
     });
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      chart.remove();
-    };
-  }, [coinId, timeframe, coinSymbol]);
+  }, [coinId, coinSymbol]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      <div style={{ display: 'flex', gap: '8px', padding: '0 10px' }}>
-        {[7, 14, 30, 90].map(d => (
-          <button 
-            key={d}
-            onClick={() => setTimeframe(d)}
-            style={{
-              padding: '4px 10px',
-              borderRadius: '6px',
-              background: timeframe === d ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-              border: 'none',
-              color: timeframe === d ? '#000' : '#fff',
-              fontSize: '11px',
-              cursor: 'pointer',
-              fontWeight: 600
-            }}
-          >
-            {d === 7 ? '1W' : d === 14 ? '2W' : d === 30 ? '1M' : '3M'}
-          </button>
-        ))}
-      </div>
-      <div style={{ position: 'relative', width: '100%', height: '400px' }} ref={chartContainerRef}>
-        {isLoading && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', zIndex: 10 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <div className="coin-loader" />
-              <span style={{ fontSize: '12px', color: 'var(--accent-cyan)' }}>Analyzing Chart...</span>
-            </div>
-          </div>
-        )}
-      </div>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '300px' }}>
+      <div id={containerId} style={{ width: '100%', height: '100%' }} />
+      {isLoading && (
+        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', color: 'var(--accent-cyan)', zIndex: 10 }}>
+          Analyzing data for AI...
+        </div>
+      )}
     </div>
   );
 };
