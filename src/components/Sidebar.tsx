@@ -72,6 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div
             style={{
                 width: isOpen ? '220px' : '60px',
+                height: '100%',
                 background: 'var(--bg-panel)',
                 borderRight: '1px solid var(--border-subtle)',
                 display: 'flex',
@@ -168,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ))}
             </nav>
 
-            {/* Settings */}
+            {/* Settings - pinned at bottom */}
             <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-subtle)' }}>
                 <button
                     id="settings-btn"

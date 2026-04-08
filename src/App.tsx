@@ -16,6 +16,7 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import ChartModal from './components/ChartModal';
+import { TechnicalAnalysisChart } from './components/TechnicalAnalysisChart';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
 import { ethers } from 'ethers';
@@ -161,9 +162,15 @@ function App() {
                     addSystemMessageProxy(`Swap Error: ${err.message}`);
                 }
             }
+        } else if (action === 'ADD_CONTACT') {
+            const { name, address } = params;
+            if (name && address) {
+                addContact(name, address);
+            }
         } else if (action === 'WATCHLIST_ADD') {
             const { coinId } = params;
             if (coinId) {
+                toggleWatchlist(coinId);
                 addSystemMessageProxy(`Added **${coinId}** to your watchlist.`);
             }
         } else if (action === 'WATCHLIST_REMOVE') {
@@ -791,7 +798,82 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {activeTab === 'agent' ? (
+                    {/* Show chart in center when a coin is selected in Chart Analysis mode */}
+                    {activeCoin && (manualPanelOverride === 'coin-chart' || rightPanelView === 'coin-chart') ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', padding: '16px', overflow: 'hidden' }}>
+                            {/* Chart header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <img src={activeCoin.image} alt={activeCoin.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                                    <div>
+                                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0' }}>
+                                            {activeCoin.name} ({activeCoin.symbol.toUpperCase()})
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontSize: '15px', color: '#00d4ff', fontFamily: 'JetBrains Mono' }}>
+                                                ${activeCoin.current_price?.toLocaleString() ?? '0'}
+                                            </span>
+                                            <span style={{
+                                                fontSize: '13px',
+                                                fontWeight: 600,
+                                                color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366'
+                                            }}>
+                                                {(activeCoin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
+                                                {(activeCoin.price_change_percentage_24h || 0).toFixed(2)}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        onClick={() => {
+                                            if (isInWatchlist(activeCoin.id)) {
+                                                toggleWatchlist(activeCoin.id);
+                                            } else {
+                                                toggleWatchlist(activeCoin.id);
+                                            }
+                                        }}
+                                        style={{
+                                            padding: '8px 14px',
+                                            borderRadius: '8px',
+                                            background: isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                            border: `1px solid ${isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                                            color: isInWatchlist(activeCoin.id) ? '#ef4444' : '#10b981',
+                                            fontWeight: 600,
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {isInWatchlist(activeCoin.id) ? '✕ Remove' : '+ Watchlist'}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveCoin(null)}
+                                        style={{
+                                            padding: '8px 14px',
+                                            borderRadius: '8px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid var(--border-subtle)',
+                                            color: 'var(--text-muted)',
+                                            fontWeight: 600,
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        ✕ Close Chart
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Chart fills the rest of the center panel */}
+                            <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 0 }}>
+                                <TechnicalAnalysisChart
+                                    coinId={activeCoin.id}
+                                    coinSymbol={activeCoin.symbol}
+                                    onAnalysisComplete={chartShouldAnalyze ? handleAnalysisComplete : undefined}
+                                />
+                            </div>
+                        </div>
+                    ) : activeTab === 'agent' ? (
                         <ChatPanel
                             messages={messages}
                             isLoading={isLoading}
@@ -826,11 +908,15 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     watchlistLoading={watchlistLoading}
                     watchlistLastUpdated={watchlistLastUpdated}
                     onCoinClick={(coin) => {
-                        setWatchlistCoin(coin);
+                        const currentView = manualPanelOverride || rightPanelView;
+                        if (currentView === 'coin-chart') {
+                            setActiveCoin(coin);
+                            setChartShouldAnalyze(false);
+                        } else {
+                            setWatchlistCoin(coin);
+                        }
                     }}
-                    onBackToWatchlist={() => setRightPanelView('watchlist')}
                     activeCoin={activeCoin}
-                    onAnalysisComplete={chartShouldAnalyze ? handleAnalysisComplete : undefined}
                     newsData={newsData}
                     fearGreedData={fearGreedData}
                     newsLoading={newsLoading}
