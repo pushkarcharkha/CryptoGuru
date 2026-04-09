@@ -9,6 +9,7 @@ import {
 import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, SwapPreview, AppTransaction, CoinGeckoCoin, NewsArticle, FearGreedData, FuturesPosition } from '../types';
 import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
+import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
 import { AnimatedNumber } from './AnimatedNumber';
 import {
     Send as SendIcon,
@@ -60,6 +61,8 @@ interface RightPanelProps {
     pendingFuturesPosition?: any | null;
     onConfirmFutures?: (sl?: number, tp?: number) => void;
     onDeclineFutures?: () => void;
+    chartShouldAnalyze?: boolean;
+    onAnalysisComplete?: (stats: any) => void;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -81,92 +84,58 @@ const Row = ({ label, value, color = '#e2e8f0' }: {label: string, value: string,
   </div>
 );
 
-const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => {
-    const [sl, setSl] = React.useState(5);
-    const [tp, setTp] = React.useState(15);
-
-    return (
-        <div style={{
-            background: 'rgba(10,5,2,0.6)',
-            border: '1px solid rgba(0,212,255,0.3)',
-            borderRadius: '12px',
-            padding: '20px',
-            margin: '12px',
-            backdropFilter: 'blur(10px)'
-        }}>
-            <h3 style={{ color: '#e2e8f0', fontSize: '18px', fontWeight: 700, marginBottom: '16px', textAlign: 'center' }}>
-                Position Preview
-            </h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                <Row label="Coin" value={position.coin} />
-                <Row label="Direction" value={position.direction.toUpperCase()} 
-                    color={position.direction === 'long' ? '#10ff88' : '#ff3366'} />
-                <Row label="Leverage" value={`${position.leverage}x`} />
-                <Row label="Size" value={`$${parseFloat(position.size).toLocaleString()}`} />
-                <Row label="Entry Price" value={`$${parseFloat(position.entryPrice).toLocaleString()}`} />
-                <Row label="Margin Used" value={`$${parseFloat(position.margin).toLocaleString()}`} color="var(--accent-cyan)" />
-                <Row label="Liq. Price" value={`$${parseFloat(position.liquidationPrice).toLocaleString()}`} color="#ff4466" />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '10px', color: '#ff4466', fontWeight: 700, marginBottom: '4px' }}>SL (%)</label>
-                    <input 
-                        type="number" 
-                        value={sl} 
-                        onChange={(e) => setSl(parseFloat(e.target.value) || 0)}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,68,102,0.3)', borderRadius: '6px', padding: '6px', color: '#fff', fontSize: '12px' }}
-                    />
-                </div>
-                <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '10px', color: '#00ff88', fontWeight: 700, marginBottom: '4px' }}>TP (%)</label>
-                    <input 
-                        type="number" 
-                        value={tp} 
-                        onChange={(e) => setTp(parseFloat(e.target.value) || 0)}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '6px', padding: '6px', color: '#fff', fontSize: '12px' }}
-                    />
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                    onClick={() => onConfirm(sl, tp)}
-                    style={{
-                        flex: 1,
-                        background: 'rgba(0,255,136,0.15)',
-                        border: '1px solid #00ff88',
-                        color: '#00ff88',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontWeight: '700',
-                        fontSize: '14px'
-                    }}
-                >
-                    Confirm
-                </button>
-                <button
-                    onClick={onDecline}
-                    style={{
-                        flex: 1,
-                        background: 'rgba(255,51,102,0.15)',
-                        border: '1px solid #ff3366',
-                        color: '#ff3366',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontWeight: '700',
-                        fontSize: '14px'
-                    }}
-                >
-                    Decline
-                </button>
-            </div>
-        </div>
-    );
-};
+const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => (
+  <div style={{
+    background: '#111128',
+    border: '1px solid #1a1a3a',
+    borderRadius: '12px',
+    padding: '20px',
+    margin: '12px'
+  }}>
+    <h3 style={{ color: '#00ff88', marginBottom: '16px', marginTop: 0 }}>Position Preview</h3>
+    
+    {/* Market Context */}
+    <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+      <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Trend: {position.trend}</p>
+      <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Support: ${position.support}</p>
+      <p style={{ margin: '0', fontSize: '13px', color: '#e2e8f0' }}>Resistance: ${position.resistance}</p>
+    </div>
+    
+    {/* Position Details */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+      <Row label="Direction" value={position.direction.toUpperCase()} />
+      <Row label="Leverage" value={`${position.leverage}x`} />
+      <Row label="Size" value={`$${position.size}`} />
+      <Row label="Entry" value={`$${position.entryPrice}`} />
+      <Row label="Margin" value={`$${position.margin}`} />
+      <Row label="Liquidation" value={`$${position.liquidationPrice}`} color="#ff3366" />
+    </div>
+    
+    {/* Risk warning for high leverage */}
+    {position.leverage >= 10 && (
+      <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '16px' }}>
+        ⚠️ {position.leverage}x leverage — 
+        a {(100/position.leverage).toFixed(1)}% move against you = liquidation
+      </p>
+    )}
+    
+    {/* Confirm / Decline */}
+    <div style={{ display: 'flex', gap: '10px' }}>
+      <button
+        onClick={onConfirm}
+        style={{ flex: 1, background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', color: '#00ff88', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+      >
+        ✓ Confirm
+      </button>
+      <button
+        onClick={onDecline}
+        style={{ flex: 1, background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+      >
+        ✕ Decline
+      </button>
+    </div>
+  </div>
+);
 
 
 
@@ -203,6 +172,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
     pendingFuturesPosition,
     onConfirmFutures,
     onDeclineFutures,
+    chartShouldAnalyze,
+    onAnalysisComplete,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -442,6 +413,20 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '0 0 16px 0' }}>
                             {activeCoin ? `Viewing ${activeCoin.symbol.toUpperCase()} chart. Click another coin to switch.` : 'Select a coin to open its chart, or type "analyze BTC" in chat.'}
                         </p>
+
+                        <div style={{ flex: 1, minHeight: '300px', marginBottom: '16px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            {activeCoin ? (
+                                <TechnicalAnalysisChart
+                                    coinId={activeCoin.id}
+                                    coinSymbol={activeCoin.symbol}
+                                    onAnalysisComplete={chartShouldAnalyze ? onAnalysisComplete : undefined}
+                                />
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>
+                                    No coin selected
+                                </div>
+                            )}
+                        </div>
 
                         {/* Watchlist coins */}
                         {watchlistCoins.length > 0 && (

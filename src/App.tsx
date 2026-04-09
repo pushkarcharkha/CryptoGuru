@@ -17,7 +17,6 @@ import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
 import ChartModal from './components/ChartModal';
-import { TechnicalAnalysisChart } from './components/TechnicalAnalysisChart';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
@@ -225,6 +224,8 @@ function App() {
             const { coin, direction, leverage, size } = params;
             if (coin && direction && leverage && size && prices) {
                 try {
+                    addSystemMessageProxy(`Analyzing ${coin} before opening your ${direction} position...`);
+
                     const coinUpper = coin.toUpperCase();
                     const coinId = SUPPORTED_FUTURES_COINS[coinUpper] || allCoins.find(c => c.symbol.toUpperCase() === coinUpper || c.id === coin.toLowerCase())?.id;
                     if (!coinId) throw new Error(`Coin ${coin} is not supported.`);
@@ -235,6 +236,28 @@ function App() {
                         return;
                     }
 
+                    // Fetch chart data
+                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=30`);
+                    if (!response.ok) throw new Error('Failed to fetch chart data');
+                    const ohlcv = await response.json();
+                    
+                    const candles = ohlcv.map((d: any) => ({ low: d[3], high: d[2], close: d[4] }));
+                    const support = Math.min(...candles.slice(-20).map((c: any) => c.low));
+                    const resistance = Math.max(...candles.slice(-20).map((c: any) => c.high));
+                    
+                    const calcEma = (data: number[], period: number) => {
+                        const k = 2 / (period + 1);
+                        const ema = [data[0]];
+                        for (let i = 1; i < data.length; i++) {
+                            ema.push(data[i] * k + ema[i - 1] * (1 - k));
+                        }
+                        return ema;
+                    };
+                    const closes = candles.map((c: any) => c.close);
+                    const ema20 = calcEma(closes, 20);
+                    const ema50 = calcEma(closes, 50);
+                    const trend = ema20[ema20.length - 1] > ema50[ema50.length - 1] ? 'Bullish' : 'Bearish';
+
                     const lev = parseInt(leverage);
                     const parsedSize = parseFloat(size);
                     const margin = parsedSize / lev;
@@ -242,14 +265,61 @@ function App() {
                         ? currentPrice * (1 - 1 / lev)
                         : currentPrice * (1 + 1 / lev);
 
+                    const fg = fearGreedData?.[0];
+                    const recentNews = newsData?.slice(0, 3).map(n => n.title).join(', ');
+                    const analysisPrompt = `
+    User wants to open a ${direction} ${coinUpper} position with ${lev}x leverage for $${parsedSize}.
+    
+    CURRENT MARKET DATA:
+    Price: $${currentPrice}
+    Support: $${support.toFixed(0)}
+    Resistance: $${resistance.toFixed(0)}
+    Trend: ${trend}
+    Fear & Greed: ${fg ? fg.value : 'N/A'}/100 — ${fg ? fg.value_classification : 'N/A'}
+    Recent News: ${recentNews || 'None'}
+    
+    POSITION DETAILS:
+    Entry: $${currentPrice}
+    Margin: $${margin}
+    Liquidation Price: $${liquidationPrice.toFixed(2)}
+    
+    Give a 4-5 line analysis:
+    1. Is this a good time to ${direction} ${coinUpper} based on current data?
+    2. What does the chart say?
+    3. What does sentiment say?
+    4. What is your view on this specific trade?
+    5. End with: "Position details on the right — confirm or decline."
+    
+    Be direct and specific. No generic advice.
+  `;
+                    
+                    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: 'llama-3.3-70b-versatile',
+                            messages: [{ role: 'system', content: analysisPrompt }],
+                            temperature: 0.5,
+                            max_tokens: 300
+                        })
+                    });
+                    
+                    if (groqRes.ok) {
+                        const aiData = await groqRes.json();
+                        addSystemMessageProxy(aiData.choices[0].message.content);
+                    }
+
                     setPendingFuturesPosition({
-                        coin: coin.toUpperCase(),
+                        coin: coinUpper,
                         direction: direction.toLowerCase(),
                         leverage: lev,
                         size: parsedSize,
                         entryPrice: currentPrice,
                         margin: margin.toFixed(2),
-                        liquidationPrice: liquidationPrice.toFixed(2)
+                        liquidationPrice: liquidationPrice.toFixed(2),
+                        support: support.toFixed(0),
+                        resistance: resistance.toFixed(0),
+                        trend: trend
                     });
 
                     setRightPanelView('futures-confirm');
@@ -283,7 +353,7 @@ function App() {
                 }
             }
         }
-    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, addAlert]);
+    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, apiKey, fearGreedData, newsData]);
 
     const handleConfirmFutures = async (sl?: number, tp?: number) => {
         if (!pendingFuturesPosition) return;
@@ -403,7 +473,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'watchlist') {
                 setRightPanelView('watchlist');
                 setManualPanelOverride('watchlist');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                // DO NOT call sendMessage here
+                // Complete silence — just open the panel
             } else if (feature === 'chart') {
                 setActiveCoin(null);
                 setRightPanelView('coin-chart');
@@ -873,82 +944,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {/* Show chart in center when a coin is selected in Chart Analysis mode */}
-                    {activeCoin && (manualPanelOverride === 'coin-chart' || rightPanelView === 'coin-chart') ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', padding: '16px', overflow: 'hidden' }}>
-                            {/* Chart header */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <img src={activeCoin.image} alt={activeCoin.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
-                                    <div>
-                                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0' }}>
-                                            {activeCoin.name} ({activeCoin.symbol.toUpperCase()})
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '15px', color: '#00d4ff', fontFamily: 'JetBrains Mono' }}>
-                                                ${activeCoin.current_price?.toLocaleString() ?? '0'}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '13px',
-                                                fontWeight: 600,
-                                                color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366'
-                                            }}>
-                                                {(activeCoin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
-                                                {(activeCoin.price_change_percentage_24h || 0).toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={() => {
-                                            if (isInWatchlist(activeCoin.id)) {
-                                                toggleWatchlist(activeCoin.id);
-                                            } else {
-                                                toggleWatchlist(activeCoin.id);
-                                            }
-                                        }}
-                                        style={{
-                                            padding: '8px 14px',
-                                            borderRadius: '8px',
-                                            background: isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                            border: `1px solid ${isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                                            color: isInWatchlist(activeCoin.id) ? '#ef4444' : '#10b981',
-                                            fontWeight: 600,
-                                            fontSize: '12px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        {isInWatchlist(activeCoin.id) ? '✕ Remove' : '+ Watchlist'}
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveCoin(null)}
-                                        style={{
-                                            padding: '8px 14px',
-                                            borderRadius: '8px',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid var(--border-subtle)',
-                                            color: 'var(--text-muted)',
-                                            fontWeight: 600,
-                                            fontSize: '12px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        ✕ Close Chart
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Chart fills the rest of the center panel */}
-                            <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 0 }}>
-                                <TechnicalAnalysisChart
-                                    coinId={activeCoin.id}
-                                    coinSymbol={activeCoin.symbol}
-                                    onAnalysisComplete={chartShouldAnalyze ? handleAnalysisComplete : undefined}
-                                />
-                            </div>
-                        </div>
-                    ) : activeTab === 'agent' ? (
+                    {activeTab === 'agent' ? (
                         <ChatPanel
                             messages={messages}
                             isLoading={isLoading}
@@ -962,33 +958,63 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
                 {/* Right Panel */}
                 <div className="app-right-panel">
-                    <RightPanel
-                        view={manualPanelOverride || rightPanelView}
-                        prices={prices}
-                        pricesLoading={pricesLoading}
-                        wallet={wallet}
-                        transactionPreview={transactionPreview}
-                        contacts={contacts}
-                        onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
-                        onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
-                        onConfirmTransactionClick={handleConfirmTransaction}
-                        onConfirmSwapClick={handleConfirmSwap}
-                        swapPreview={swapPreview}
-                        history={history}
-                        onSwitchNetwork={switchNetwork}
-                        allCoins={allCoins}
-                        watchlistCoins={watchlistCoins}
-                        onToggleWatchlist={toggleWatchlist}
-                        isInWatchlist={isInWatchlist}
-                        watchlistLoading={watchlistLoading}
-                        watchlistLastUpdated={watchlistLastUpdated}
-                        onCoinClick={(coin) => {
-                            const currentView = manualPanelOverride || rightPanelView;
-                            if (currentView === 'coin-chart') {
-                                setActiveCoin(coin);
-                                setChartShouldAnalyze(false);
-                            } else {
-                                setWatchlistCoin(coin);
+                <RightPanel
+                    view={manualPanelOverride || rightPanelView}
+                    prices={prices}
+                    pricesLoading={pricesLoading}
+                    wallet={wallet}
+                    transactionPreview={transactionPreview}
+                    contacts={contacts}
+                    onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
+                    onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
+                    onConfirmTransactionClick={handleConfirmTransaction}
+                    onConfirmSwapClick={handleConfirmSwap}
+                    swapPreview={swapPreview}
+                    history={history}
+                    onSwitchNetwork={switchNetwork}
+                    allCoins={allCoins}
+                    watchlistCoins={watchlistCoins}
+                    onToggleWatchlist={toggleWatchlist}
+                    isInWatchlist={isInWatchlist}
+                    watchlistLoading={watchlistLoading}
+                    watchlistLastUpdated={watchlistLastUpdated}
+                    onCoinClick={(coin) => {
+                        const currentView = manualPanelOverride || rightPanelView;
+                        if (currentView === 'coin-chart') {
+                            setActiveCoin(coin);
+                            setChartShouldAnalyze(false);
+                        } else {
+                            setWatchlistCoin(coin);
+                        }
+                    }}
+                    activeCoin={activeCoin}
+                    chartShouldAnalyze={chartShouldAnalyze}
+                    onAnalysisComplete={handleAnalysisComplete}
+                    newsData={newsData}
+                    fearGreedData={fearGreedData}
+                    newsLoading={newsLoading}
+                    newsError={newsError}
+                    newsLastUpdated={newsLastUpdated}
+                    futuresBalance={futuresBalance}
+                    futuresPositions={futuresPositions}
+                    onCloseFuturesPosition={handleCloseFuturesPosition}
+                    futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
+                    pendingFuturesPosition={pendingFuturesPosition}
+                    onConfirmFutures={handleConfirmFutures}
+                    onDeclineFutures={handleDeclineFutures}
+                />
+                
+                {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
+                <div className="mobile-quick-chat-container">
+                    <input 
+                        type="text" 
+                        placeholder="Type a command (e.g. short BTC 10x)..."
+                        className="mobile-quick-chat-input"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                handleSendMessage(e.currentTarget.value.trim());
+                                e.currentTarget.value = '';
+                                setMobileView('chat');
                             }
                         }}
                         activeCoin={activeCoin}
