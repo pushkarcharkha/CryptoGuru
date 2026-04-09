@@ -226,7 +226,7 @@ function App() {
                     const coinUpper = coin.toUpperCase();
                     const coinId = SUPPORTED_FUTURES_COINS[coinUpper] || allCoins.find(c => c.symbol.toUpperCase() === coinUpper || c.id === coin.toLowerCase())?.id;
                     if (!coinId) throw new Error(`Coin ${coin} is not supported.`);
-                    
+
                     const currentPrice = prices.find(p => p.id === coinId)?.price;
                     if (!currentPrice || currentPrice === 0) {
                         addSystemMessageProxy(`Can't get live price for ${coin} right now. Try again in a moment.`);
@@ -237,8 +237,8 @@ function App() {
                     const parsedSize = parseFloat(size);
                     const margin = parsedSize / lev;
                     const liquidationPrice = direction.toLowerCase() === 'long'
-                      ? currentPrice * (1 - 1/lev)
-                      : currentPrice * (1 + 1/lev);
+                        ? currentPrice * (1 - 1 / lev)
+                        : currentPrice * (1 + 1 / lev);
 
                     setPendingFuturesPosition({
                         coin: coin.toUpperCase(),
@@ -249,7 +249,7 @@ function App() {
                         margin: margin.toFixed(2),
                         liquidationPrice: liquidationPrice.toFixed(2)
                     });
-                    
+
                     setRightPanelView('futures-confirm');
                     setManualPanelOverride('futures-confirm');
                     setMobileView('panel');
@@ -337,22 +337,22 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 - Overall trend direction
 - Risk level`;
 
-        // Use the ref because we don't want sendMessage to be a dependency (circular)
-        // Actually, we can just call sendMessage from the hook since we have it here
-        sendMessage(statsMessage, {
-            address: wallet.address,
-            holdings: wallet.holdings,
-            contacts: contacts,
-            history: history,
-            watchlist: watchlistIds
-        }, {
-            fearGreed: fearGreedData,
-            news: newsData
-        }, {
-            balance: futuresBalance,
-            positions: futuresPositions
-        }, 'chart', stats, { hidden: true });
-        setMobileView('chat');
+            // Use the ref because we don't want sendMessage to be a dependency (circular)
+            // Actually, we can just call sendMessage from the hook since we have it here
+            sendMessage(statsMessage, {
+                address: wallet.address,
+                holdings: wallet.holdings,
+                contacts: contacts,
+                history: history,
+                watchlist: watchlistIds
+            }, {
+                fearGreed: fearGreedData,
+                news: newsData
+            }, {
+                balance: futuresBalance,
+                positions: futuresPositions
+            }, 'chart', stats, { hidden: true });
+            setMobileView('chat');
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
         }
@@ -644,7 +644,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             };
 
             const isChartAnalysisRequest = (msg: string) => {
-                const analysisKeywords = ['analyz', 'analysis', 'technical', 'what do you see', 
+                const analysisKeywords = ['analyz', 'analysis', 'technical', 'what do you see',
                     'check the chart', 'read the chart', 'pattern'];
                 return analysisKeywords.some(k => msg.toLowerCase().includes(k));
             };
@@ -787,13 +787,13 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             <div className={`app-main-layout mobile-view-${mobileView}`} style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Sidebar */}
                 <div className="app-sidebar">
-                <Sidebar
-                    isOpen={sidebarOpen}
-                    onToggle={() => setSidebarOpen((v) => !v)}
-                    activeFeature={activeFeature}
-                    onFeatureClick={handleFeatureClick}
-                    onSettingsClick={() => setSettingsOpen(true)}
-                />
+                    <Sidebar
+                        isOpen={sidebarOpen}
+                        onToggle={() => setSidebarOpen((v) => !v)}
+                        activeFeature={activeFeature}
+                        onFeatureClick={handleFeatureClick}
+                        onSettingsClick={() => setSettingsOpen(true)}
+                    />
                 </div>
 
                 {/* Center Panel */}
@@ -887,68 +887,68 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
                 {/* Right Panel */}
                 <div className="app-right-panel">
-                <RightPanel
-                    view={manualPanelOverride || rightPanelView}
-                    prices={prices}
-                    pricesLoading={pricesLoading}
-                    wallet={wallet}
-                    transactionPreview={transactionPreview}
-                    contacts={contacts}
-                    onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
-                    onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
-                    onConfirmTransactionClick={handleConfirmTransaction}
-                    onConfirmSwapClick={handleConfirmSwap}
-                    swapPreview={swapPreview}
-                    history={history}
-                    onSwitchNetwork={switchNetwork}
-                    allCoins={allCoins}
-                    watchlistCoins={watchlistCoins}
-                    onToggleWatchlist={toggleWatchlist}
-                    isInWatchlist={isInWatchlist}
-                    watchlistLoading={watchlistLoading}
-                    watchlistLastUpdated={watchlistLastUpdated}
-                    onCoinClick={(coin) => {
-                        const currentView = manualPanelOverride || rightPanelView;
-                        if (currentView === 'coin-chart') {
-                            setActiveCoin(coin);
-                            setChartShouldAnalyze(false);
-                        } else {
-                            setWatchlistCoin(coin);
-                        }
-                    }}
-                    activeCoin={activeCoin}
-                    newsData={newsData}
-                    fearGreedData={fearGreedData}
-                    newsLoading={newsLoading}
-                    newsError={newsError}
-                    newsLastUpdated={newsLastUpdated}
-                    futuresBalance={futuresBalance}
-                    futuresPositions={futuresPositions}
-                    onCloseFuturesPosition={handleCloseFuturesPosition}
-                    futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
-                    pendingFuturesPosition={pendingFuturesPosition}
-                    onConfirmFutures={handleConfirmFutures}
-                    onDeclineFutures={handleDeclineFutures}
-                />
-                
-                {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
-                <div className="mobile-quick-chat-container">
-                    <input 
-                        type="text" 
-                        placeholder="Type a command (e.g. short BTC 10x)..."
-                        className="mobile-quick-chat-input"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                handleSendMessage(e.currentTarget.value.trim());
-                                e.currentTarget.value = '';
-                                setMobileView('chat');
+                    <RightPanel
+                        view={manualPanelOverride || rightPanelView}
+                        prices={prices}
+                        pricesLoading={pricesLoading}
+                        wallet={wallet}
+                        transactionPreview={transactionPreview}
+                        contacts={contacts}
+                        onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
+                        onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
+                        onConfirmTransactionClick={handleConfirmTransaction}
+                        onConfirmSwapClick={handleConfirmSwap}
+                        swapPreview={swapPreview}
+                        history={history}
+                        onSwitchNetwork={switchNetwork}
+                        allCoins={allCoins}
+                        watchlistCoins={watchlistCoins}
+                        onToggleWatchlist={toggleWatchlist}
+                        isInWatchlist={isInWatchlist}
+                        watchlistLoading={watchlistLoading}
+                        watchlistLastUpdated={watchlistLastUpdated}
+                        onCoinClick={(coin) => {
+                            const currentView = manualPanelOverride || rightPanelView;
+                            if (currentView === 'coin-chart') {
+                                setActiveCoin(coin);
+                                setChartShouldAnalyze(false);
+                            } else {
+                                setWatchlistCoin(coin);
                             }
                         }}
+                        activeCoin={activeCoin}
+                        newsData={newsData}
+                        fearGreedData={fearGreedData}
+                        newsLoading={newsLoading}
+                        newsError={newsError}
+                        newsLastUpdated={newsLastUpdated}
+                        futuresBalance={futuresBalance}
+                        futuresPositions={futuresPositions}
+                        onCloseFuturesPosition={handleCloseFuturesPosition}
+                        futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
+                        pendingFuturesPosition={pendingFuturesPosition}
+                        onConfirmFutures={handleConfirmFutures}
+                        onDeclineFutures={handleDeclineFutures}
                     />
-                    <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
-                        &#10148;
+
+                    {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
+                    <div className="mobile-quick-chat-container">
+                        <input
+                            type="text"
+                            placeholder="Type a command (e.g. short BTC 10x)..."
+                            className="mobile-quick-chat-input"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                    handleSendMessage(e.currentTarget.value.trim());
+                                    e.currentTarget.value = '';
+                                    setMobileView('chat');
+                                }
+                            }}
+                        />
+                        <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
+                            &#10148;
+                        </div>
                     </div>
-                </div>
 
                 </div>
             </div>
@@ -1001,7 +1001,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
             {/* Upgrade Modal */}
             {showUpgradeModal && (
-                <UpgradeModal 
+                <UpgradeModal
                     onClose={() => setShowUpgradeModal(false)}
                     userId={userData?.id}
                     userEmail={userData?.email}
