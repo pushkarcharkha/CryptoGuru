@@ -16,7 +16,6 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import ChartModal from './components/ChartModal';
-import { TechnicalAnalysisChart } from './components/TechnicalAnalysisChart';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
 import { ethers } from 'ethers';
