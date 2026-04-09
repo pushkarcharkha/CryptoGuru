@@ -123,7 +123,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </svg>
                 </button>
                 {isOpen && (
-                    <div className="fade-in" style={{ overflow: 'hidden' }}>
+                    <div
+                        className="fade-in"
+                        style={{ overflow: 'hidden' }}
+                    >
                         <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: '16px', color: '#00d4ff', whiteSpace: 'nowrap' }}>
                             Cryptoguru
                         </div>
@@ -169,21 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ))}
             </nav>
 
-            {/* Settings - pinned at bottom */}
-            <div style={{ padding: '12px 8px', borderTop: '1px solid var(--border-subtle)' }}>
-                <button
-                    id="settings-btn"
-                    onClick={onSettingsClick}
-                    className="sidebar-item"
-                    style={{ width: '100%', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
-                    title="Settings & API Key"
-                >
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', flexShrink: 0, color: 'var(--text-muted)' }}>
-                        <Settings size={20} />
-                    </span>
-                    {isOpen && <span className="fade-in">Settings</span>}
-                </button>
-            </div>
+
         </div>
     );
 };

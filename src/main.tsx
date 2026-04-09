@@ -7,6 +7,8 @@ import LandingPage from './LandingPage.tsx';
 import PaymentPage from './PaymentPage.tsx';
 import Login from './pages/Login.tsx';
 import Signup from './pages/Signup.tsx';
+import Applications from './components/Applications.tsx';
+import TraderApplicationForm from './pages/TraderApplicationForm.tsx';
 import { ProtectedRoute } from './components/ProtectedRoute.tsx';
 
 createRoot(document.getElementById('root')!).render(
@@ -14,6 +16,8 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path='/apply-trader' element={<TraderApplicationForm />} />
+        <Route path='/applications' element={<Applications />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/payment/:plan" element={<PaymentPage />} />

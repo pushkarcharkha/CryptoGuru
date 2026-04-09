@@ -902,6 +902,50 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         );
     };
 
+    // Dynamic signal handlers for the new Supabase-backed feed
+    const handleCopyTrade = (signal: Signal) => {
+        setActiveTab('agent');
+        const message = `Execute Buy Order:\nCoin: ${signal.coin}\nDirection: ${signal.direction.toUpperCase()}\nEntry: ${signal.entry_price}\nTarget: ${signal.target_price}\nStop Loss: ${signal.stop_loss}`;
+        sendMessage(message, {
+            address: wallet.address,
+            holdings: wallet.holdings,
+            contacts,
+            history,
+            watchlist: watchlistIds
+        }, {
+            fearGreed: fearGreedData,
+            news: newsData
+        }, {
+            balance: futuresBalance,
+            positions: futuresPositions
+        }, activeFeature);
+    };
+
+    const handleDynamicSignalAnalyze = (signal: Signal) => {
+        setActiveTab('agent');
+        sendMessage(
+            `Analyze this trading signal and provide insights:\nCoin: ${signal.coin}\nDirection: ${signal.direction}\nEntry: $${signal.entry_price}\nTarget: $${signal.target_price}\nStop Loss: $${signal.stop_loss}\nTrader: ${signal.trader_name || 'Unknown'}\n\nDo not open or suggest executing any paper futures trade action. Just return analysis with entry zone, stop loss, target, risk, and confidence.`,
+            {
+                address: wallet.address,
+                holdings: wallet.holdings,
+                contacts,
+                history,
+                watchlist: watchlistIds
+            },
+            {
+                fearGreed: fearGreedData,
+                news: newsData
+            },
+            {
+                balance: futuresBalance,
+                positions: futuresPositions
+            },
+            activeFeature,
+            null,
+            { allowActions: false }
+        );
+    };
+
     return (
         <div
             className="app-root-wrapper"
@@ -952,7 +996,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                             onClearChat={clearMessages}
                         />
                     ) : (
-                        <SignalFeed onSignalClick={handleSignalClick} onAnalyzeClick={handleSignalAnalyzeOnly} />
+                        <SignalFeed onCopyTrade={handleCopyTrade} onAnalyzeClick={handleDynamicSignalAnalyze} />
                     )}
                 </div>
 

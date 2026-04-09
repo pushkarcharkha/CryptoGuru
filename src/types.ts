@@ -95,6 +95,20 @@ export interface TraderSignal {
     change24h?: number;
 }
 
+export interface Signal {
+    id: string;
+    created_at: string;
+    user_id: string;
+    coin: string;
+    direction: 'Long' | 'Short';
+    entry_price: number;
+    target_price: number;
+    stop_loss: number;
+    // Joined from user_data
+    trader_name?: string;
+    is_verified?: boolean;
+}
+
 export interface PortfolioHolding {
     symbol: string;
     name: string;
