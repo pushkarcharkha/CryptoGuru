@@ -50,7 +50,11 @@ const TopBar: React.FC<TopBarProps> = ({
   return (
     <div className="topbar-root">
       {/* Left: Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+      <div 
+        style={{ display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}
+        onClick={() => window.location.href = '/'}
+        title="Go to Home"
+      >
         <img
           src={appLogo}
           alt="Cryptoguru"

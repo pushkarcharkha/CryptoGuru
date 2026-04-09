@@ -11,15 +11,31 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    else navigate('/app');
-    setLoading(false);
-  };
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+
+        const ADMIN_EMAIL = 'yashladda3333@gmail.com';
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            setError(error.message);
+        }
+        else {
+            if (data.user.email === ADMIN_EMAIL) {
+                navigate('/applications');
+            } else {
+                navigate('/app');
+            }
+        }
+
+        setLoading(false);
+    };
 
   const handleGoogleLogin = async () => {
     try {

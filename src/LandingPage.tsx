@@ -163,7 +163,9 @@ export default function LandingPage() {
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        heroCanvasRef.current.appendChild(renderer.domElement);
+        const currentRef = heroCanvasRef.current;
+        currentRef.innerHTML = '';
+        currentRef.appendChild(renderer.domElement);
 
         // Floating nodes
         const nodes: THREE.Mesh[] = [];
@@ -278,7 +280,9 @@ export default function LandingPage() {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('resize', handleResize);
             renderer.dispose();
-            heroCanvasRef.current?.removeChild(renderer.domElement);
+            if (currentRef && renderer.domElement.parentNode === currentRef) {
+                currentRef.removeChild(renderer.domElement);
+            }
         };
     }, []);
 
@@ -292,7 +296,9 @@ export default function LandingPage() {
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         // Match the size roughly to the container
         renderer.setSize(400, 400);
-        globeCanvasRef.current.appendChild(renderer.domElement);
+        const currentGlobeRef = globeCanvasRef.current;
+        currentGlobeRef.innerHTML = '';
+        currentGlobeRef.appendChild(renderer.domElement);
 
         const group = new THREE.Group();
         scene.add(group);
@@ -337,7 +343,9 @@ export default function LandingPage() {
         return () => {
             cancelAnimationFrame(animationFrameId);
             renderer.dispose();
-            globeCanvasRef.current?.removeChild(renderer.domElement);
+            if (currentGlobeRef && renderer.domElement.parentNode === currentGlobeRef) {
+                currentGlobeRef.removeChild(renderer.domElement);
+            }
         };
     }, []);
 
