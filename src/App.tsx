@@ -15,10 +15,11 @@ import { useTransactionHistory } from './hooks/useTransactionHistory';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
+import { useAlerts } from './hooks/useAlerts';
 import ChartModal from './components/ChartModal';
 import { TechnicalAnalysisChart } from './components/TechnicalAnalysisChart';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
-import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
+import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
@@ -95,8 +96,9 @@ function App() {
 
     const { prices, isLoading: pricesLoading } = useCryptoPrices(['bitcoin', 'ethereum', 'solana', 'cardano', 'chainlink', 'binancecoin', 'matic-network', 'avalanche-2', 'tether', 'usd-coin', 'ripple', 'polkadot']);
 
-    const futuresPricesMap = prices ? Object.fromEntries(prices.map(p => [p.id, { usd: p.price }])) : null;
+    const futuresPricesMap = prices ? Object.fromEntries(prices.map((p: any) => [p.id, { usd: p.price }])) : null;
     const { positions: futuresPositions, balance: futuresBalance, openPosition, closePosition, getLivePnL } = useFutures(futuresPricesMap);
+    const { alerts, addAlert, removeAlert, markAsTriggered, clearTriggered } = useAlerts();
 
     // Helper for auto-switching panels that respects manual overrides
     const setPanelSafe = useCallback((panel: RightPanelView) => {
@@ -261,24 +263,33 @@ function App() {
             const { positionId } = params;
             if (positionId && prices) {
                 const id = parseInt(positionId);
-                const pos = futuresPositions.find(p => p.id === id);
+                const pos = futuresPositions.find((p: FuturesPosition) => p.id === id);
                 if (pos) {
                     const coinId = SUPPORTED_FUTURES_COINS[pos.coin.toUpperCase()];
-                    const currentPrice = prices.find(p => p.id === coinId)?.price || 0;
+                    const currentPrice = prices.find((p: any) => p.id === coinId)?.price || 0;
                     closePosition(id, currentPrice);
 
                     const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
                     addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
                 }
             }
+        } else if (action === 'SET_ALERT') {
+            const { coin, condition, price } = params;
+            if (coin && condition && price) {
+                const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coin.toLowerCase() || c.name.toLowerCase() === coin.toLowerCase());
+                if (coinObj) {
+                    addAlert(coinObj.id, coinObj.symbol, parseFloat(price), condition as 'above' | 'below');
+                    addSystemMessageProxy(`Alert set! I'll notify you when **${coinObj.symbol.toUpperCase()}** goes ${condition} **$${parseFloat(price).toLocaleString()}**.`);
+                }
+            }
         }
-    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL]);
+    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, addAlert]);
 
-    const handleConfirmFutures = async () => {
+    const handleConfirmFutures = async (sl?: number, tp?: number) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
         try {
-            const pos = await openPosition(coin, direction, leverage, size, entryPrice);
+            const pos = await openPosition(coin, direction, leverage, size, entryPrice, sl, tp);
             setPendingFuturesPosition(null);
             setRightPanelView('futures');
             setManualPanelOverride('futures');
@@ -296,9 +307,9 @@ function App() {
     };
 
     const handleCloseFuturesPosition = (id: number) => {
-        const pos = futuresPositions.find(p => p.id === id);
+        const pos = futuresPositions.find((p: FuturesPosition) => p.id === id);
         if (pos && prices) {
-            const currentPrice = prices.find(p => p.id === pos.coinId)?.price || 0;
+            const currentPrice = prices.find((p: any) => p.id === pos.coinId)?.price || 0;
             closePosition(id, currentPrice);
             const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
             addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
@@ -635,6 +646,30 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 }
             }
 
+            // --- Alert Detection ---
+            const alertRegex = /(?:notify|alert|tell) me (?:when|if) ([a-zA-Z]+) (?:crosses|hits|is|goes|above|below|over|under)\s*([<>]?\s*[\d,.]+)/i;
+            const alertMatch = content.match(alertRegex);
+            
+            if (alertMatch) {
+                const coinStr = alertMatch[1].toLowerCase();
+                const priceStr = alertMatch[2].replace(/[$,]/g, '');
+                const price = parseFloat(priceStr);
+                
+                const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coinStr || c.name.toLowerCase() === coinStr);
+                
+                if (coinObj && !isNaN(price)) {
+                    addUserMessage(content);
+                    
+                    // Sync with live price for perfect condition mapping
+                    const livePrice = prices?.find(p => p.id === coinObj.id)?.price || coinObj.current_price;
+                    const condition = price > livePrice ? 'above' : 'below';
+                    
+                    addAlert(coinObj.id, coinObj.symbol, price, condition);
+                    addSystemMessage(`Acknowledged. I've set a price alert for **${coinObj.symbol.toUpperCase()}** ${condition} **$${price.toLocaleString()}**.`);
+                    return;
+                }
+            }
+
             // --- Chart Analysis Fixes ---
             const isChartViewRequest = (msg: string) => {
                 const viewOnly = ['show chart', 'open chart', 'show me chart', 'view chart'];
@@ -694,8 +729,45 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 positions: futuresPositions
             }, activeFeature);
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage]
     );
+
+    // Background Price Alert Monitor
+    useEffect(() => {
+        if (!prices || prices.length === 0 || alerts.length === 0) return;
+
+        alerts.forEach(alert => {
+            if (alert.isTriggered) return;
+
+            const priceObj = prices.find(p => p.id === alert.coinId);
+            if (!priceObj) return;
+
+            const currentPrice = priceObj.price;
+            let triggered = false;
+
+            if (alert.condition === 'above' && currentPrice >= alert.targetPrice) triggered = true;
+            if (alert.condition === 'below' && currentPrice <= alert.targetPrice) triggered = true;
+
+            if (triggered) {
+                markAsTriggered(alert.id);
+                addSystemMessageProxy(`🔔 **ALERT TRIGGERED:** ${alert.symbol.toUpperCase()} has reached **$${currentPrice.toLocaleString()}** (Target: $${alert.targetPrice.toLocaleString()})`);
+                
+                // Also try native notification
+                if (Notification.permission === 'granted') {
+                    new Notification('CryptoGuru Price Alert', {
+                        body: `${alert.symbol.toUpperCase()} hit $${currentPrice.toLocaleString()}!`,
+                        icon: '/cryptoguru.png'
+                    });
+                }
+            }
+        });
+    }, [prices, alerts, markAsTriggered, addSystemMessageProxy]);
+
+    useEffect(() => {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
 
     const handleConnectWallet = useCallback(() => {
         if (!wallet.isConnected) {
@@ -781,6 +853,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 onConnectWallet={handleConnectWallet}
                 onUpgrade={() => setShowUpgradeModal(true)}
                 formatAddress={formatAddress}
+                alerts={alerts}
+                removeAlert={removeAlert}
+                clearTriggered={clearTriggered}
             />
 
             {/* Main Layout */}

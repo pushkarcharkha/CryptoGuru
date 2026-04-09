@@ -134,6 +134,8 @@ export interface FuturesPosition {
     exitPrice?: number;
     pnl?: number;
     pnlPercent?: number;
+    stopLoss?: number | null;
+    takeProfit?: number | null;
 }
 
 export type SidebarFeature =
@@ -160,4 +162,13 @@ export interface FearGreedData {
     value_classification: string;
     timestamp: string;
     time_until_update?: string;
+}
+export interface PriceAlert {
+    id: string;
+    symbol: string;
+    coinId: string;
+    targetPrice: number;
+    condition: 'above' | 'below';
+    isTriggered: boolean;
+    createdAt: number;
 }
