@@ -15,10 +15,10 @@ import { useTransactionHistory } from './hooks/useTransactionHistory';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
+import { useAlerts } from './hooks/useAlerts';
 import ChartModal from './components/ChartModal';
-import { TechnicalAnalysisChart } from './components/TechnicalAnalysisChart';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
-import type { RightPanelView, SidebarFeature, TraderSignal, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin } from './types';
+import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
@@ -95,8 +95,9 @@ function App() {
 
     const { prices, isLoading: pricesLoading } = useCryptoPrices(['bitcoin', 'ethereum', 'solana', 'cardano', 'chainlink', 'binancecoin', 'matic-network', 'avalanche-2', 'tether', 'usd-coin', 'ripple', 'polkadot']);
 
-    const futuresPricesMap = prices ? Object.fromEntries(prices.map(p => [p.id, { usd: p.price }])) : null;
+    const futuresPricesMap = prices ? Object.fromEntries(prices.map((p: any) => [p.id, { usd: p.price }])) : null;
     const { positions: futuresPositions, balance: futuresBalance, openPosition, closePosition, getLivePnL } = useFutures(futuresPricesMap);
+    const { alerts, addAlert, removeAlert, markAsTriggered, clearTriggered } = useAlerts();
 
     // Helper for auto-switching panels that respects manual overrides
     const setPanelSafe = useCallback((panel: RightPanelView) => {
@@ -223,33 +224,104 @@ function App() {
             const { coin, direction, leverage, size } = params;
             if (coin && direction && leverage && size && prices) {
                 try {
+                    addSystemMessageProxy(`Analyzing ${coin} before opening your ${direction} position...`);
+
                     const coinUpper = coin.toUpperCase();
                     const coinId = SUPPORTED_FUTURES_COINS[coinUpper] || allCoins.find(c => c.symbol.toUpperCase() === coinUpper || c.id === coin.toLowerCase())?.id;
                     if (!coinId) throw new Error(`Coin ${coin} is not supported.`);
-                    
+
                     const currentPrice = prices.find(p => p.id === coinId)?.price;
                     if (!currentPrice || currentPrice === 0) {
                         addSystemMessageProxy(`Can't get live price for ${coin} right now. Try again in a moment.`);
                         return;
                     }
 
+                    // Fetch chart data
+                    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=30`);
+                    if (!response.ok) throw new Error('Failed to fetch chart data');
+                    const ohlcv = await response.json();
+                    
+                    const candles = ohlcv.map((d: any) => ({ low: d[3], high: d[2], close: d[4] }));
+                    const support = Math.min(...candles.slice(-20).map((c: any) => c.low));
+                    const resistance = Math.max(...candles.slice(-20).map((c: any) => c.high));
+                    
+                    const calcEma = (data: number[], period: number) => {
+                        const k = 2 / (period + 1);
+                        const ema = [data[0]];
+                        for (let i = 1; i < data.length; i++) {
+                            ema.push(data[i] * k + ema[i - 1] * (1 - k));
+                        }
+                        return ema;
+                    };
+                    const closes = candles.map((c: any) => c.close);
+                    const ema20 = calcEma(closes, 20);
+                    const ema50 = calcEma(closes, 50);
+                    const trend = ema20[ema20.length - 1] > ema50[ema50.length - 1] ? 'Bullish' : 'Bearish';
+
                     const lev = parseInt(leverage);
                     const parsedSize = parseFloat(size);
                     const margin = parsedSize / lev;
                     const liquidationPrice = direction.toLowerCase() === 'long'
-                      ? currentPrice * (1 - 1/lev)
-                      : currentPrice * (1 + 1/lev);
+                        ? currentPrice * (1 - 1 / lev)
+                        : currentPrice * (1 + 1 / lev);
+
+                    const fg = fearGreedData?.[0];
+                    const recentNews = newsData?.slice(0, 3).map(n => n.title).join(', ');
+                    const analysisPrompt = `
+    User wants to open a ${direction} ${coinUpper} position with ${lev}x leverage for $${parsedSize}.
+    
+    CURRENT MARKET DATA:
+    Price: $${currentPrice}
+    Support: $${support.toFixed(0)}
+    Resistance: $${resistance.toFixed(0)}
+    Trend: ${trend}
+    Fear & Greed: ${fg ? fg.value : 'N/A'}/100 — ${fg ? fg.value_classification : 'N/A'}
+    Recent News: ${recentNews || 'None'}
+    
+    POSITION DETAILS:
+    Entry: $${currentPrice}
+    Margin: $${margin}
+    Liquidation Price: $${liquidationPrice.toFixed(2)}
+    
+    Give a 4-5 line analysis:
+    1. Is this a good time to ${direction} ${coinUpper} based on current data?
+    2. What does the chart say?
+    3. What does sentiment say?
+    4. What is your view on this specific trade?
+    5. End with: "Position details on the right — confirm or decline."
+    
+    Be direct and specific. No generic advice.
+  `;
+                    
+                    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+                        body: JSON.stringify({
+                            model: 'llama-3.3-70b-versatile',
+                            messages: [{ role: 'system', content: analysisPrompt }],
+                            temperature: 0.5,
+                            max_tokens: 300
+                        })
+                    });
+                    
+                    if (groqRes.ok) {
+                        const aiData = await groqRes.json();
+                        addSystemMessageProxy(aiData.choices[0].message.content);
+                    }
 
                     setPendingFuturesPosition({
-                        coin: coin.toUpperCase(),
+                        coin: coinUpper,
                         direction: direction.toLowerCase(),
                         leverage: lev,
                         size: parsedSize,
                         entryPrice: currentPrice,
                         margin: margin.toFixed(2),
-                        liquidationPrice: liquidationPrice.toFixed(2)
+                        liquidationPrice: liquidationPrice.toFixed(2),
+                        support: support.toFixed(0),
+                        resistance: resistance.toFixed(0),
+                        trend: trend
                     });
-                    
+
                     setRightPanelView('futures-confirm');
                     setManualPanelOverride('futures-confirm');
                     setMobileView('panel');
@@ -261,24 +333,33 @@ function App() {
             const { positionId } = params;
             if (positionId && prices) {
                 const id = parseInt(positionId);
-                const pos = futuresPositions.find(p => p.id === id);
+                const pos = futuresPositions.find((p: FuturesPosition) => p.id === id);
                 if (pos) {
                     const coinId = SUPPORTED_FUTURES_COINS[pos.coin.toUpperCase()];
-                    const currentPrice = prices.find(p => p.id === coinId)?.price || 0;
+                    const currentPrice = prices.find((p: any) => p.id === coinId)?.price || 0;
                     closePosition(id, currentPrice);
 
                     const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
                     addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
                 }
             }
+        } else if (action === 'SET_ALERT') {
+            const { coin, condition, price } = params;
+            if (coin && condition && price) {
+                const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coin.toLowerCase() || c.name.toLowerCase() === coin.toLowerCase());
+                if (coinObj) {
+                    addAlert(coinObj.id, coinObj.symbol, parseFloat(price), condition as 'above' | 'below');
+                    addSystemMessageProxy(`Alert set! I'll notify you when **${coinObj.symbol.toUpperCase()}** goes ${condition} **$${parseFloat(price).toLocaleString()}**.`);
+                }
+            }
         }
-    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL]);
+    }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, apiKey, fearGreedData, newsData]);
 
-    const handleConfirmFutures = async () => {
+    const handleConfirmFutures = async (sl?: number, tp?: number) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
         try {
-            const pos = await openPosition(coin, direction, leverage, size, entryPrice);
+            const pos = await openPosition(coin, direction, leverage, size, entryPrice, sl, tp);
             setPendingFuturesPosition(null);
             setRightPanelView('futures');
             setManualPanelOverride('futures');
@@ -296,9 +377,9 @@ function App() {
     };
 
     const handleCloseFuturesPosition = (id: number) => {
-        const pos = futuresPositions.find(p => p.id === id);
+        const pos = futuresPositions.find((p: FuturesPosition) => p.id === id);
         if (pos && prices) {
-            const currentPrice = prices.find(p => p.id === pos.coinId)?.price || 0;
+            const currentPrice = prices.find((p: any) => p.id === pos.coinId)?.price || 0;
             closePosition(id, currentPrice);
             const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
             addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
@@ -337,22 +418,22 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 - Overall trend direction
 - Risk level`;
 
-        // Use the ref because we don't want sendMessage to be a dependency (circular)
-        // Actually, we can just call sendMessage from the hook since we have it here
-        sendMessage(statsMessage, {
-            address: wallet.address,
-            holdings: wallet.holdings,
-            contacts: contacts,
-            history: history,
-            watchlist: watchlistIds
-        }, {
-            fearGreed: fearGreedData,
-            news: newsData
-        }, {
-            balance: futuresBalance,
-            positions: futuresPositions
-        }, 'chart', stats, { hidden: true });
-        setMobileView('chat');
+            // Use the ref because we don't want sendMessage to be a dependency (circular)
+            // Actually, we can just call sendMessage from the hook since we have it here
+            sendMessage(statsMessage, {
+                address: wallet.address,
+                holdings: wallet.holdings,
+                contacts: contacts,
+                history: history,
+                watchlist: watchlistIds
+            }, {
+                fearGreed: fearGreedData,
+                news: newsData
+            }, {
+                balance: futuresBalance,
+                positions: futuresPositions
+            }, 'chart', stats, { hidden: true });
+            setMobileView('chat');
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
         }
@@ -392,7 +473,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'watchlist') {
                 setRightPanelView('watchlist');
                 setManualPanelOverride('watchlist');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                // DO NOT call sendMessage here
+                // Complete silence — just open the panel
             } else if (feature === 'chart') {
                 setActiveCoin(null);
                 setRightPanelView('coin-chart');
@@ -635,6 +717,30 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 }
             }
 
+            // --- Alert Detection ---
+            const alertRegex = /(?:notify|alert|tell) me (?:when|if) ([a-zA-Z]+) (?:crosses|hits|is|goes|above|below|over|under)\s*([<>]?\s*[\d,.]+)/i;
+            const alertMatch = content.match(alertRegex);
+            
+            if (alertMatch) {
+                const coinStr = alertMatch[1].toLowerCase();
+                const priceStr = alertMatch[2].replace(/[$,]/g, '');
+                const price = parseFloat(priceStr);
+                
+                const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coinStr || c.name.toLowerCase() === coinStr);
+                
+                if (coinObj && !isNaN(price)) {
+                    addUserMessage(content);
+                    
+                    // Sync with live price for perfect condition mapping
+                    const livePrice = prices?.find(p => p.id === coinObj.id)?.price || coinObj.current_price;
+                    const condition = price > livePrice ? 'above' : 'below';
+                    
+                    addAlert(coinObj.id, coinObj.symbol, price, condition);
+                    addSystemMessage(`Acknowledged. I've set a price alert for **${coinObj.symbol.toUpperCase()}** ${condition} **$${price.toLocaleString()}**.`);
+                    return;
+                }
+            }
+
             // --- Chart Analysis Fixes ---
             const isChartViewRequest = (msg: string) => {
                 const viewOnly = ['show chart', 'open chart', 'show me chart', 'view chart'];
@@ -644,7 +750,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             };
 
             const isChartAnalysisRequest = (msg: string) => {
-                const analysisKeywords = ['analyz', 'analysis', 'technical', 'what do you see', 
+                const analysisKeywords = ['analyz', 'analysis', 'technical', 'what do you see',
                     'check the chart', 'read the chart', 'pattern'];
                 return analysisKeywords.some(k => msg.toLowerCase().includes(k));
             };
@@ -694,8 +800,45 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 positions: futuresPositions
             }, activeFeature);
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage]
     );
+
+    // Background Price Alert Monitor
+    useEffect(() => {
+        if (!prices || prices.length === 0 || alerts.length === 0) return;
+
+        alerts.forEach(alert => {
+            if (alert.isTriggered) return;
+
+            const priceObj = prices.find(p => p.id === alert.coinId);
+            if (!priceObj) return;
+
+            const currentPrice = priceObj.price;
+            let triggered = false;
+
+            if (alert.condition === 'above' && currentPrice >= alert.targetPrice) triggered = true;
+            if (alert.condition === 'below' && currentPrice <= alert.targetPrice) triggered = true;
+
+            if (triggered) {
+                markAsTriggered(alert.id);
+                addSystemMessageProxy(`🔔 **ALERT TRIGGERED:** ${alert.symbol.toUpperCase()} has reached **$${currentPrice.toLocaleString()}** (Target: $${alert.targetPrice.toLocaleString()})`);
+                
+                // Also try native notification
+                if (Notification.permission === 'granted') {
+                    new Notification('CryptoGuru Price Alert', {
+                        body: `${alert.symbol.toUpperCase()} hit $${currentPrice.toLocaleString()}!`,
+                        icon: '/cryptoguru.png'
+                    });
+                }
+            }
+        });
+    }, [prices, alerts, markAsTriggered, addSystemMessageProxy]);
+
+    useEffect(() => {
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
 
     const handleConnectWallet = useCallback(() => {
         if (!wallet.isConnected) {
@@ -825,99 +968,27 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 onConnectWallet={handleConnectWallet}
                 onUpgrade={() => setShowUpgradeModal(true)}
                 formatAddress={formatAddress}
+                alerts={alerts}
+                removeAlert={removeAlert}
+                clearTriggered={clearTriggered}
             />
 
             {/* Main Layout */}
             <div className={`app-main-layout mobile-view-${mobileView}`} style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 {/* Sidebar */}
                 <div className="app-sidebar">
-                <Sidebar
-                    isOpen={sidebarOpen}
-                    onToggle={() => setSidebarOpen((v) => !v)}
-                    activeFeature={activeFeature}
-                    onFeatureClick={handleFeatureClick}
-                    onSettingsClick={() => setSettingsOpen(true)}
-                />
+                    <Sidebar
+                        isOpen={sidebarOpen}
+                        onToggle={() => setSidebarOpen((v) => !v)}
+                        activeFeature={activeFeature}
+                        onFeatureClick={handleFeatureClick}
+                        onSettingsClick={() => setSettingsOpen(true)}
+                    />
                 </div>
 
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {/* Show chart in center when a coin is selected in Chart Analysis mode */}
-                    {activeCoin && (manualPanelOverride === 'coin-chart' || rightPanelView === 'coin-chart') ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-panel)', padding: '16px', overflow: 'hidden' }}>
-                            {/* Chart header */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <img src={activeCoin.image} alt={activeCoin.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
-                                    <div>
-                                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0' }}>
-                                            {activeCoin.name} ({activeCoin.symbol.toUpperCase()})
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '15px', color: '#00d4ff', fontFamily: 'JetBrains Mono' }}>
-                                                ${activeCoin.current_price?.toLocaleString() ?? '0'}
-                                            </span>
-                                            <span style={{
-                                                fontSize: '13px',
-                                                fontWeight: 600,
-                                                color: (activeCoin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366'
-                                            }}>
-                                                {(activeCoin.price_change_percentage_24h || 0) >= 0 ? '+' : ''}
-                                                {(activeCoin.price_change_percentage_24h || 0).toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        onClick={() => {
-                                            if (isInWatchlist(activeCoin.id)) {
-                                                toggleWatchlist(activeCoin.id);
-                                            } else {
-                                                toggleWatchlist(activeCoin.id);
-                                            }
-                                        }}
-                                        style={{
-                                            padding: '8px 14px',
-                                            borderRadius: '8px',
-                                            background: isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                            border: `1px solid ${isInWatchlist(activeCoin.id) ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                                            color: isInWatchlist(activeCoin.id) ? '#ef4444' : '#10b981',
-                                            fontWeight: 600,
-                                            fontSize: '12px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        {isInWatchlist(activeCoin.id) ? '✕ Remove' : '+ Watchlist'}
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveCoin(null)}
-                                        style={{
-                                            padding: '8px 14px',
-                                            borderRadius: '8px',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid var(--border-subtle)',
-                                            color: 'var(--text-muted)',
-                                            fontWeight: 600,
-                                            fontSize: '12px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        ✕ Close Chart
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Chart fills the rest of the center panel */}
-                            <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)', minHeight: 0 }}>
-                                <TechnicalAnalysisChart
-                                    coinId={activeCoin.id}
-                                    coinSymbol={activeCoin.symbol}
-                                    onAnalysisComplete={chartShouldAnalyze ? handleAnalysisComplete : undefined}
-                                />
-                            </div>
-                        </div>
-                    ) : activeTab === 'agent' ? (
+                    {activeTab === 'agent' ? (
                         <ChatPanel
                             messages={messages}
                             isLoading={isLoading}
@@ -961,6 +1032,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         }
                     }}
                     activeCoin={activeCoin}
+                    chartShouldAnalyze={chartShouldAnalyze}
+                    onAnalysisComplete={handleAnalysisComplete}
                     newsData={newsData}
                     fearGreedData={fearGreedData}
                     newsLoading={newsLoading}
@@ -1045,7 +1118,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
             {/* Upgrade Modal */}
             {showUpgradeModal && (
-                <UpgradeModal 
+                <UpgradeModal
                     onClose={() => setShowUpgradeModal(false)}
                     userId={userData?.id}
                     userEmail={userData?.email}

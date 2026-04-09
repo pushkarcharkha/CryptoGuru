@@ -6,7 +6,7 @@ import type { AgentType, AgentContext } from '../agents';
 
 export function useGroqChat(apiKey: string, onActionDetected?: (action: string, params: Record<string, string>) => void | Promise<void>, onRequireUpgrade?: () => void) {
   const onActionDetectedRef = useRef(onActionDetected);
-  
+
   useEffect(() => {
     onActionDetectedRef.current = onActionDetected;
   }, [onActionDetected]);
@@ -24,13 +24,13 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
 
   const sendMessage = useCallback(
     async (
-      content: string, 
-      walletContext?: { 
-        address: string | null; 
-        holdings: PortfolioHolding[]; 
-        contacts?: Record<string, string>; 
-        history?: AppTransaction[]; 
-        watchlist?: string[] 
+      content: string,
+      walletContext?: {
+        address: string | null;
+        holdings: PortfolioHolding[];
+        contacts?: Record<string, string>;
+        history?: AppTransaction[];
+        watchlist?: string[]
       },
       sentimentContext?: {
         fearGreed?: any[];
@@ -176,7 +176,7 @@ Only reference these headlines when directly relevant to what the user asked.`;
       // ── 5. Build user context block ───────────────────────────────────
       const holdings = walletContext?.address ? walletContext.holdings.map(h => `${h.amount} ${h.symbol}`).join(', ') : 'None';
       const contactsStr = walletContext?.contacts ? Object.entries(walletContext.contacts).map(([n, a]) => `${n}: ${a}`).join(', ') : 'Empty';
-      
+
       const userContextBlock = `USER CONTEXT:
 Address: ${walletContext?.address || 'Not connected'}
 Holdings: ${holdings}
@@ -184,10 +184,10 @@ ADDRESS BOOK: ${contactsStr}
 Watchlist: ${walletContext?.watchlist?.join(', ') || 'Empty'}
 
 PAPER FUTURES POSITIONS:
-${!futuresContext || futuresContext.positions.length === 0 ? 'No open positions' : 
-  futuresContext.positions.map((p: any) => 
-    `${p.direction.toUpperCase()} ${p.coin} ${p.leverage}x | Entry: $${p.entryPrice} | Size: $${p.size} | Liq: $${p.liquidationPrice}`
-  ).join('\n')}
+${!futuresContext || futuresContext.positions.length === 0 ? 'No open positions' :
+          futuresContext.positions.map((p: any) =>
+            `${p.direction.toUpperCase()} ${p.coin} ${p.leverage}x | Entry: $${p.entryPrice} | Size: $${p.size} | Liq: $${p.liquidationPrice}`
+          ).join('\n')}
 
 Virtual Balance: $${futuresContext?.balance || '1000'}`;
 

@@ -1196,6 +1196,7 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
 /* ===== AUTH PAGES (PREMIUM) ===== */
 .auth-page {
     min-height: 100vh;
@@ -1203,8 +1204,8 @@ body {
     align-items: center;
     justify-content: center;
     background: radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(112, 0, 255, 0.05) 0%, transparent 40%),
-                var(--bg-primary);
+        radial-gradient(circle at 90% 80%, rgba(112, 0, 255, 0.05) 0%, transparent 40%),
+        var(--bg-primary);
     position: relative;
     overflow: hidden;
     padding: 20px;
@@ -1214,7 +1215,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: 
+    background-image:
         linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
     background-size: 40px 40px;
@@ -1238,8 +1239,15 @@ body {
 }
 
 @keyframes auth-card-appear {
-    from { opacity: 0; transform: translateY(20px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .auth-logo-section {
@@ -1367,8 +1375,13 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.auth-divider-premium::before { margin-right: 15px; }
-.auth-divider-premium::after { margin-left: 15px; }
+.auth-divider-premium::before {
+    margin-right: 15px;
+}
+
+.auth-divider-premium::after {
+    margin-left: 15px;
+}
 
 .auth-footer-text {
     text-align: center;
@@ -1436,7 +1449,7 @@ body {
 .topbar-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 10px;
     padding: 4px;
     flex-shrink: 0;
@@ -1460,9 +1473,9 @@ body {
 }
 
 .topbar-tab-btn.active {
-    background: linear-gradient(135deg, rgba(0,212,255,0.25), rgba(139,92,246,0.25));
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(139, 92, 246, 0.25));
     color: #00d4ff;
-    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
 }
 
 .topbar-upgrade-btn {
@@ -1475,7 +1488,7 @@ body {
     border: none;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: 0 0 15px rgba(0,255,136,0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
 }
 
 .topbar-user-info {
@@ -1485,8 +1498,13 @@ body {
     gap: 2px;
 }
 
-.topbar-wallet-short { display: none; }
-.topbar-wallet-full { display: inline; }
+.topbar-wallet-short {
+    display: none;
+}
+
+.topbar-wallet-full {
+    display: inline;
+}
 
 /* ===== APP LAYOUT: MOBILE BOTTOM NAV ===== */
 .app-bottom-nav {
@@ -1511,6 +1529,7 @@ body {
 
 /* --- TABLET (≤1024px) --- */
 @media (max-width: 1024px) {
+
     /* Landing */
     .hero-prices {
         display: flex !important;
@@ -1518,23 +1537,50 @@ body {
         gap: 8px !important;
         justify-content: center;
     }
-    .timeline-line { display: none; }
-    .how-it-works > div:last-child { flex-direction: column; }
-    .pricing-card.popular { transform: scale(1.02); }
+
+    .timeline-line {
+        display: none;
+    }
+
+    .how-it-works>div:last-child {
+        flex-direction: column;
+    }
+
+    .pricing-card.popular {
+        transform: scale(1.02);
+    }
 
     /* TopBar */
-    .topbar-ticker { display: none; }
-    .topbar-logo { height: 100px; }
-    .topbar-tab-label { display: none; }
-    .topbar-tabs { gap: 2px; padding: 4px; }
-    .topbar-tab-btn { padding: 6px 10px; }
+    .topbar-ticker {
+        display: none;
+    }
+
+    .topbar-logo {
+        height: 100px;
+    }
+
+    .topbar-tab-label {
+        display: none;
+    }
+
+    .topbar-tabs {
+        gap: 2px;
+        padding: 4px;
+    }
+
+    .topbar-tab-btn {
+        padding: 6px 10px;
+    }
 
     /* Auth card */
-    .auth-card-premium { padding: 36px 28px; }
+    .auth-card-premium {
+        padding: 36px 28px;
+    }
 }
 
 /* --- MOBILE LARGE (≤768px) --- */
 @media (max-width: 768px) {
+
     /* === TOPBAR === */
     .topbar-root {
         padding: 0 16px;
@@ -1545,23 +1591,50 @@ body {
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         gap: 8px;
     }
-    .topbar-logo { height: 64px; }
-    .topbar-user-info { display: none; }
-    .topbar-divider { display: none; }
-    .topbar-upgrade-btn { padding: 4px 8px; font-size: 9px; order: 1; }
-    .topbar-wallet-full { display: none; }
-    .topbar-wallet-short { display: inline; }
-    .wallet-btn { padding: 6px 10px; font-size: 11px; order: 2; }
+
+    .topbar-logo {
+        height: 64px;
+    }
+
+    .topbar-user-info {
+        display: none;
+    }
+
+    .topbar-divider {
+        display: none;
+    }
+
+    .topbar-upgrade-btn {
+        padding: 4px 8px;
+        font-size: 9px;
+        order: 1;
+    }
+
+    .topbar-wallet-full {
+        display: none;
+    }
+
+    .topbar-wallet-short {
+        display: inline;
+    }
+
+    .wallet-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+        order: 2;
+    }
 
     /* Scaling UTILITIES for components */
     .panel-content h2 {
         font-size: 16px !important;
         margin-bottom: 12px !important;
     }
+
     .glass-card {
         padding: 12px !important;
         margin-bottom: 8px !important;
     }
+
     .app-root-wrapper {
         background: #050508;
     }
@@ -1585,6 +1658,7 @@ body {
         height: 100%;
         min-height: unset;
     }
+
     .app-main-layout.mobile-view-chat .app-right-panel {
         display: none !important;
     }
@@ -1593,12 +1667,14 @@ body {
         display: flex !important;
         flex: 1;
         width: 100% !important;
-        min-width: 0 !important; /* CRITICAL FIX: Override desktop min-width: 400px */
+        min-width: 0 !important;
+        /* CRITICAL FIX: Override desktop min-width: 400px */
         max-width: 100% !important;
         height: 100%;
         max-height: none !important;
         border-left: none !important;
     }
+
     .app-main-layout.mobile-view-panel .app-chat-panel {
         display: none !important;
     }
@@ -1606,14 +1682,15 @@ body {
     /* Bottom navigation bar */
     .app-bottom-nav {
         display: flex;
-        position: relative; /* Remove fixed to eliminate overlap entirely */
+        position: relative;
+        /* Remove fixed to eliminate overlap entirely */
         background: rgba(14, 14, 28, 0.8);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border-top: 1px solid rgba(255, 255, 255, 0.08);
         z-index: 100;
         padding: 8px 4px env(safe-area-inset-bottom, 8px);
-        box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
     }
 
     .app-bottom-nav-btn {
@@ -1645,6 +1722,7 @@ body {
         height: 100dvh;
         overflow: hidden;
     }
+
     .app-main-layout {
         box-sizing: border-box;
         flex: 1;
@@ -1665,35 +1743,58 @@ body {
         border-radius: 12px;
     }
 
-    .hero-prices span { gap: 6px !important; }
+    .hero-prices span {
+        gap: 6px !important;
+    }
 
-    .landing-ticker { display: none !important; }
+    .landing-ticker {
+        display: none !important;
+    }
 
-    .section { padding: 48px 5% !important; }
+    .section {
+        padding: 48px 5% !important;
+    }
 
-    .feature-card { padding: 20px; }
+    .feature-card {
+        padding: 20px;
+    }
 
-    .how-it-works > div:last-child {
+    .how-it-works>div:last-child {
         flex-direction: column !important;
         gap: 16px;
     }
 
-    .pricing-card { margin-bottom: 16px; }
-    .pricing-card.popular { transform: scale(1); }
+    .pricing-card {
+        margin-bottom: 16px;
+    }
+
+    .pricing-card.popular {
+        transform: scale(1);
+    }
 
     /* Terminal window */
-    .terminal-window { margin: 0 !important; }
+    .terminal-window {
+        margin: 0 !important;
+    }
 
     /* === PAYMENT PAGE === */
-    .payment-grid { grid-template-columns: 1fr !important; }
-    .payment-page-root { padding: 24px 4% !important; }
+    .payment-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .payment-page-root {
+        padding: 24px 4% !important;
+    }
 
     /* === AUTH === */
     .auth-card-premium {
         padding: 28px 20px;
         border-radius: 16px;
     }
-    .auth-logo-text { font-size: 24px; }
+
+    .auth-logo-text {
+        font-size: 24px;
+    }
 
     /* === MODAL / OVERLAYS === */
     .settings-modal-inner {
@@ -1701,6 +1802,7 @@ body {
         max-height: 90vh !important;
         overflow-y: auto;
     }
+
     .exchange-modal-inner {
         width: 95vw !important;
     }
@@ -1718,6 +1820,7 @@ body {
         z-index: 50;
         margin-top: auto;
     }
+
     .mobile-quick-chat-input {
         width: 100%;
         background: rgba(255, 255, 255, 0.04);
@@ -1728,14 +1831,16 @@ body {
         font-size: 14px;
         font-family: 'Inter', sans-serif;
         transition: all 0.2s;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
     }
+
     .mobile-quick-chat-input:focus {
         outline: none;
         border-color: rgba(0, 212, 255, 0.5);
         background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.1), inset 0 2px 4px rgba(0,0,0,0.2);
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.2);
     }
+
     .mobile-quick-chat-input::placeholder {
         color: var(--text-muted);
     }
@@ -1743,25 +1848,41 @@ body {
 
 /* --- MOBILE SMALL (≤480px) --- */
 @media (max-width: 480px) {
-    .topbar-root { padding: 0 8px; height: 52px; }
-    .topbar-logo { height: 55px; }
-    .topbar-tabs { gap: 0; }
-    .topbar-tab-btn { padding: 6px 8px; }
-    .topbar-upgrade-btn { display: none; }
+    .topbar-root {
+        padding: 0 8px;
+        height: 52px;
+    }
+
+    .topbar-logo {
+        height: 55px;
+    }
+
+    .topbar-tabs {
+        gap: 0;
+    }
+
+    .topbar-tab-btn {
+        padding: 6px 8px;
+    }
+
+    .topbar-upgrade-btn {
+        display: none;
+    }
 
     /* Landing page */
-    .btn-primary, .btn-outline {
+    .btn-primary,
+    .btn-outline {
         padding: 10px 20px !important;
         font-size: 15px !important;
     }
 
-    .landing-hero > div:nth-child(2) > div:last-child {
+    .landing-hero>div:nth-child(2)>div:last-child {
         flex-direction: column !important;
         gap: 12px;
         width: 100%;
     }
 
-    .landing-hero > div:nth-child(2) > div:last-child > button {
+    .landing-hero>div:nth-child(2)>div:last-child>button {
         width: 100%;
         margin: 0 !important;
     }
@@ -1772,30 +1893,66 @@ body {
     }
 
     /* Section headings */
-    h2 { font-size: clamp(24px, 7vw, 40px) !important; }
-    h3 { font-size: clamp(18px, 5vw, 28px) !important; }
+    h2 {
+        font-size: clamp(24px, 7vw, 40px) !important;
+    }
+
+    h3 {
+        font-size: clamp(18px, 5vw, 28px) !important;
+    }
 
     /* Pricing */
-    .pricing-card { padding: 20px 16px; }
+    .pricing-card {
+        padding: 20px 16px;
+    }
 
     /* Chat messages */
-    .msg-ai, .msg-user { max-width: 95%; font-size: 13px; }
+    .msg-ai,
+    .msg-user {
+        max-width: 95%;
+        font-size: 13px;
+    }
 
     /* Auth */
-    .auth-card-premium { padding: 24px 16px; margin: 12px; }
-    .auth-logo-section img { height: 60px !important; }
+    .auth-card-premium {
+        padding: 24px 16px;
+        margin: 12px;
+    }
+
+    .auth-logo-section img {
+        height: 60px !important;
+    }
 }
 
 /* --- LANDSCAPE PHONE FIX --- */
 @media (max-height: 500px) and (orientation: landscape) {
-    .topbar-root { height: 48px; }
-    .topbar-logo { height: 44px; }
-    .app-right-panel { max-height: 35vh; }
-    .landing-hero { height: auto !important; min-height: 100vh; padding: 60px 5% !important; }
+    .topbar-root {
+        height: 48px;
+    }
+
+    .topbar-logo {
+        height: 44px;
+    }
+
+    .app-right-panel {
+        max-height: 35vh;
+    }
+
+    .landing-hero {
+        height: auto !important;
+        min-height: 100vh;
+        padding: 60px 5% !important;
+    }
 }
 
 /* --- LARGE DESKTOP (≥1440px) --- */
 @media (min-width: 1440px) {
-    .topbar-logo { height: 160px; }
-    .topbar-tab-btn { padding: 6px 20px; font-size: 14px; }
+    .topbar-logo {
+        height: 160px;
+    }
+
+    .topbar-tab-btn {
+        padding: 6px 20px;
+        font-size: 14px;
+    }
 }
