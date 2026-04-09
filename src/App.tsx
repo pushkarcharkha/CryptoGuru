@@ -1017,39 +1017,11 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                 setMobileView('chat');
                             }
                         }}
-                        activeCoin={activeCoin}
-                        newsData={newsData}
-                        fearGreedData={fearGreedData}
-                        newsLoading={newsLoading}
-                        newsError={newsError}
-                        newsLastUpdated={newsLastUpdated}
-                        futuresBalance={futuresBalance}
-                        futuresPositions={futuresPositions}
-                        onCloseFuturesPosition={handleCloseFuturesPosition}
-                        futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
-                        pendingFuturesPosition={pendingFuturesPosition}
-                        onConfirmFutures={handleConfirmFutures}
-                        onDeclineFutures={handleDeclineFutures}
                     />
-
-                    {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
-                    <div className="mobile-quick-chat-container">
-                        <input
-                            type="text"
-                            placeholder="Type a command (e.g. short BTC 10x)..."
-                            className="mobile-quick-chat-input"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                    handleSendMessage(e.currentTarget.value.trim());
-                                    e.currentTarget.value = '';
-                                    setMobileView('chat');
-                                }
-                            }}
-                        />
-                        <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
-                            &#10148;
-                        </div>
+                    <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
+                        &#10148;
                     </div>
+                </div>
 
                 </div>
             </div>
