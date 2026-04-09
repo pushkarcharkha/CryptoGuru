@@ -59,7 +59,7 @@ interface RightPanelProps {
     onCloseFuturesPosition?: (id: number, currentPrice: number) => void;
     futuresPrices?: Record<string, { usd: number }> | null;
     pendingFuturesPosition?: any | null;
-    onConfirmFutures?: () => void;
+    onConfirmFutures?: (sl?: number, tp?: number) => void;
     onDeclineFutures?: () => void;
     chartShouldAnalyze?: boolean;
     onAnalysisComplete?: (stats: any) => void;
@@ -187,16 +187,69 @@ const RightPanel: React.FC<RightPanelProps> = ({
     const totalPortfolioValue = holdingsWithValues.reduce((sum, h) => sum + h.valueUsd, 0);
 
     // History Filtering Logic
-    const filteredHistory = history.filter(tx => {
+    const unifiedHistory = React.useMemo(() => {
+        const spotItems = history.map(tx => ({ ...tx, itemType: 'spot' as const }));
+        const futuresItems = (futuresPositions || [])
+            .filter(p => p.status === 'closed' || p.status === 'liquidated')
+            .map(p => ({
+                ...p,
+                timestamp: p.closedAt || p.openedAt,
+                itemType: 'futures' as const,
+                hash: `futures-${p.id}`
+            }));
+        // @ts-ignore
+        return [...spotItems, ...futuresItems].sort((a, b) => b.timestamp - a.timestamp);
+    }, [history, futuresPositions]);
+
+    const filteredHistory = unifiedHistory.filter(item => {
         if (searchQuery === '') return true;
         const q = searchQuery.toLowerCase();
-        return (
-            tx.fromToken.toLowerCase().includes(q) ||
-            (tx.toToken && tx.toToken.toLowerCase().includes(q)) ||
-            (tx.contactName && tx.contactName.toLowerCase().includes(q)) ||
-            (tx.toAddress && tx.toAddress.toLowerCase().includes(q))
-        );
+        if (item.itemType === 'spot') {
+            const tx = item as AppTransaction;
+            return (
+                tx.fromToken.toLowerCase().includes(q) ||
+                (tx.toToken && tx.toToken.toLowerCase().includes(q)) ||
+                (tx.contactName && tx.contactName.toLowerCase().includes(q)) ||
+                (tx.toAddress && tx.toAddress.toLowerCase().includes(q))
+            );
+        } else {
+            const f = item as unknown as FuturesPosition;
+            return f.coin.toLowerCase().includes(q);
+        }
     });
+
+    const handleExportCSV = () => {
+        const headers = ["Date", "Type", "Asset", "Action", "Amount/Size", "Price", "PnL", "Network", "Status"];
+        const rows = unifiedHistory.map(item => {
+            const dateStr = new Date(item.timestamp).toISOString();
+            if (item.itemType === 'spot') {
+                const tx = item as AppTransaction;
+                const typeStr = tx.type === 'send' ? 'Send' : 'Swap';
+                const assetStr = tx.fromToken;
+                const actionStr = tx.type === 'send' ? `To ${tx.contactName || tx.toAddress}` : `For ${tx.toAmount} ${tx.toToken}`;
+                const amountStr = tx.fromAmount.toString();
+                return [dateStr, typeStr, assetStr, actionStr, amountStr, "-", "-", tx.network || "-", tx.status];
+            } else {
+                const f = item as unknown as FuturesPosition;
+                const typeStr = "Futures";
+                const assetStr = f.coin;
+                const actionStr = f.direction.toUpperCase();
+                const amountStr = f.size.toString();
+                const priceStr = `Entry: $${f.entryPrice} / Exit: $${f.exitPrice || '-'}`;
+                const pnlStr = f.pnl ? `$${f.pnl.toFixed(2)}` : "-";
+                return [dateStr, typeStr, assetStr, actionStr, amountStr, priceStr, pnlStr, "Futures (Sim)", f.status];
+            }
+        });
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `CryptoGuru_Trades_Export_${new Date().getFullYear()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div
@@ -770,7 +823,27 @@ const RightPanel: React.FC<RightPanelProps> = ({
                 {/* ===== HISTORY VIEW ===== */}
                 {view === 'history' && (
                     <div className="panel-content fade-in">
-                        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', marginBottom: '16px' }}>Journal</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Journal</h2>
+                            <button
+                                onClick={handleExportCSV}
+                                style={{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid var(--border-subtle)',
+                                    color: '#e2e8f0',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Export CSV
+                            </button>
+                        </div>
 
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
                             <input
@@ -800,68 +873,126 @@ const RightPanel: React.FC<RightPanelProps> = ({
                             </div>
                         ) : (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {filteredHistory.sort((a, b) => b.timestamp - a.timestamp).map((tx) => (
-                                    <div key={tx.id || tx.hash} className="glass-card" style={{ padding: '12px', borderLeft: `3px solid ${tx.status === 'success' ? '#10b981' : tx.status === 'failed' ? '#ef4444' : '#f59e0b'}` }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <div style={{
-                                                    width: '32px',
-                                                    height: '32px',
-                                                    borderRadius: '8px',
-                                                    background: tx.type === 'send' ? 'rgba(0, 212, 255, 0.1)' : tx.type === 'swap' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '14px'
-                                                }}>
-                                                    {tx.type === 'send' ? <CornerDownRight size={14} /> : tx.type === 'swap' ? <ArrowRightLeft size={14} /> : <DollarSign size={14} />}
+                                {filteredHistory.map((item) => {
+                                    if (item.itemType === 'spot') {
+                                        const tx = item as AppTransaction;
+                                        return (
+                                            <div key={tx.id || tx.hash} className="glass-card" style={{ padding: '12px', borderLeft: `3px solid ${tx.status === 'success' ? '#10b981' : tx.status === 'failed' ? '#ef4444' : '#f59e0b'}` }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                                        <div style={{
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '8px',
+                                                            background: tx.type === 'send' ? 'rgba(0, 212, 255, 0.1)' : tx.type === 'swap' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            {tx.type === 'send' ? <CornerDownRight size={14} /> : tx.type === 'swap' ? <ArrowRightLeft size={14} /> : <DollarSign size={14} />}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>
+                                                                {tx.type === 'send' ? 'Sent Funds' : tx.type === 'swap' ? 'Swapped Assets' : 'Received Funds'}
+                                                            </div>
+                                                            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: 'var(--accent-cyan)', marginTop: '2px' }}>
+                                                                {tx.fromAmount} {tx.fromToken}
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                {tx.type === 'send' ? `To: ${tx.contactName || tx.toAddress?.slice(0, 6) + '...' + tx.toAddress?.slice(-4)}` : tx.type === 'swap' ? `For: ${tx.toAmount} ${tx.toToken}` : `From: ${tx.toAddress?.slice(0, 6) + '...' + tx.toAddress?.slice(-4)}`}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{
+                                                            fontSize: '10px',
+                                                            fontWeight: 700,
+                                                            color: tx.status === 'success' ? '#10b981' : tx.status === 'failed' ? '#ef4444' : '#f59e0b',
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            {tx.status === 'success' ? (
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><CheckCircle size={10} /> SUCCESS</span>
+                                                            ) : tx.status === 'failed' ? (
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><XCircle size={10} /> FAILED</span>
+                                                            ) : (
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><Clock size={10} /> PENDING</span>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                            {new Date(tx.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>
-                                                        {tx.type === 'send' ? 'Sent Funds' : tx.type === 'swap' ? 'Swapped Assets' : 'Received Funds'}
-                                                    </div>
-                                                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: 'var(--accent-cyan)', marginTop: '2px' }}>
-                                                        {tx.fromAmount} {tx.fromToken}
-                                                    </div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                                        {tx.type === 'send' ? `To: ${tx.contactName || tx.toAddress?.slice(0, 6) + '...' + tx.toAddress?.slice(-4)}` : tx.type === 'swap' ? `For: ${tx.toAmount} ${tx.toToken}` : `From: ${tx.toAddress?.slice(0, 6) + '...' + tx.toAddress?.slice(-4)}`}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{
-                                                    fontSize: '10px',
-                                                    fontWeight: 700,
-                                                    color: tx.status === 'success' ? '#10b981' : tx.status === 'failed' ? '#ef4444' : '#f59e0b',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    {tx.status === 'success' ? (
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><CheckCircle size={10} /> SUCCESS</span>
-                                                    ) : tx.status === 'failed' ? (
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><XCircle size={10} /> FAILED</span>
-                                                    ) : (
-                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}><Clock size={10} /> PENDING</span>
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tx.network || 'BNB Smart Chain'} {tx.hash && tx.hash.length > 20 && `• ${tx.hash.slice(0,6)}...`}</span>
+                                                    {tx.hash && tx.hash.length >= 64 && (
+                                                        <a
+                                                            href={`https://bscscan.com/tx/${tx.hash}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            style={{ fontSize: '10px', color: 'var(--accent-cyan)', textDecoration: 'none', fontWeight: 600 }}
+                                                        >
+                                                            View on Explorer ↗
+                                                        </a>
                                                     )}
                                                 </div>
-                                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                                                    {new Date(tx.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        );
+                                    } else {
+                                        const f = item as unknown as FuturesPosition;
+                                        const isProfit = f.pnl && f.pnl >= 0;
+                                        return (
+                                            <div key={f.id} className="glass-card" style={{ padding: '12px', borderLeft: `3px solid ${isProfit ? '#10b981' : '#ef4444'}` }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                                        <div style={{
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '8px',
+                                                            background: isProfit ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            <Activity size={14} color={isProfit ? '#10b981' : '#ef4444'} />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>
+                                                                {f.direction === 'long' ? 'CLOSED LONG' : 'CLOSED SHORT'}
+                                                            </div>
+                                                            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', color: 'var(--accent-cyan)', marginTop: '2px' }}>
+                                                                {f.size} {f.coin} ({f.leverage}x)
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                                                Entry: ${f.entryPrice} • Exit: ${f.exitPrice || '-'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: 700,
+                                                            color: isProfit ? '#10b981' : '#ef4444',
+                                                            fontFamily: 'JetBrains Mono'
+                                                        }}>
+                                                            {isProfit ? '+' : ''}{f.pnl?.toFixed(2)} USD
+                                                        </div>
+                                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                                            {new Date(f.closedAt || f.openedAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+            
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Paper Trading {f.status === 'liquidated' ? '• (Liquidated)' : ''}</span>
                                                 </div>
                                             </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
-                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tx.network || 'BNB Smart Chain'}</span>
-                                            <a
-                                                href={`https://bscscan.com/tx/${tx.hash}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                style={{ fontSize: '10px', color: 'var(--accent-cyan)', textDecoration: 'none', fontWeight: 600 }}
-                                            >
-                                                View on Explorer ↗
-                                            </a>
-                                        </div>
-                                    </div>
-                                ))}
+                                        );
+                                    }
+                                })}
                             </div>
                         )}
                     </div>

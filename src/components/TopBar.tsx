@@ -1,6 +1,6 @@
-import { Bot, Radio, ArrowRightLeft, LogOut } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { CryptoPrice, WalletState } from '../types';
+import { Bot, Radio, ArrowRightLeft, LogOut, Bell, Trash2 } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import type { CryptoPrice, WalletState, PriceAlert } from '../types';
 import { AnimatedNumber } from './AnimatedNumber';
 import appLogo from '../assets/cryptoguru.png';
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,9 @@ interface TopBarProps {
   onConnectWallet: () => void;
   onUpgrade: () => void;
   formatAddress: (addr: string) => string;
+  alerts: PriceAlert[];
+  removeAlert: (id: string) => void;
+  clearTriggered: () => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -25,9 +28,16 @@ const TopBar: React.FC<TopBarProps> = ({
   onConnectWallet,
   onUpgrade,
   formatAddress,
+  alerts,
+  removeAlert,
+  clearTriggered,
 }) => {
   const [userEmail, setUserEmail] = useState('');
   const [userPlan, setUserPlan] = useState('free');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  const triggeredCount = alerts.filter(a => a.isTriggered).length;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -41,6 +51,16 @@ const TopBar: React.FC<TopBarProps> = ({
       }
     };
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleSignOut = async () => {
@@ -71,16 +91,6 @@ const TopBar: React.FC<TopBarProps> = ({
               />
             </span>
           ))}
-          {prices && prices.map(p => (
-            <span key={`dup-${p.id}`}>
-              <span style={{ color: 'var(--text-secondary)', marginRight: '6px' }}>{p.symbol}</span>
-              <AnimatedNumber 
-                value={p.price} 
-                format={(n) => n < 1 ? `$${n.toFixed(4)}` : `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                className={p.change24h >= 0 ? 'positive' : 'negative'}
-              />
-            </span>
-          ))}
         </div>
       </div>
 
@@ -99,6 +109,104 @@ const TopBar: React.FC<TopBarProps> = ({
 
       {/* Right: User Profile & Wallet */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }} className="topbar-right">
+        
+        {/* Notification Bell */}
+        <div style={{ position: 'relative' }} ref={notificationRef}>
+          <button 
+            onClick={() => setShowNotifications(!showNotifications)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              padding: '8px',
+              cursor: 'pointer',
+              color: showNotifications ? '#00ff88' : 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Bell size={18} />
+            {triggeredCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#ff3366',
+                color: 'white',
+                fontSize: '10px',
+                fontWeight: 800,
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #0a0a0c'
+              }}>
+                {triggeredCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div style={{
+              position: 'absolute',
+              top: '45px',
+              right: '0',
+              width: '300px',
+              background: 'rgba(15, 15, 20, 0.95)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+              zIndex: 1000,
+              padding: '12px',
+              animation: 'fadeIn 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>Notifications</span>
+                {triggeredCount > 0 && (
+                  <button onClick={clearTriggered} style={{ background: 'transparent', border: 'none', color: '#00ff88', fontSize: '11px', cursor: 'pointer' }}>Clear</button>
+                )}
+              </div>
+
+              <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }} className="custom-scrollbar">
+                {alerts.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                    No alerts set. Type "Notify me when BTC hits 70000" in chat.
+                  </div>
+                ) : (
+                  alerts.slice().sort((a,b) => b.createdAt - a.createdAt).map(alert => (
+                    <div key={alert.id} style={{
+                      background: alert.isTriggered ? 'rgba(0, 255, 136, 0.05)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${alert.isTriggered ? 'rgba(0, 255, 136, 0.2)' : 'var(--border-subtle)'}`,
+                      borderRadius: '8px',
+                      padding: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4ff' }}>{alert.symbol.toUpperCase()}</span>
+                        <button onClick={() => removeAlert(alert.id)} style={{ background: 'transparent', border: 'none', color: '#ff3366', cursor: 'pointer', padding: '2px' }}><Trash2 size={12} /></button>
+                      </div>
+                      <div style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Target: ${alert.targetPrice.toLocaleString()}</span>
+                        <span style={{ color: alert.isTriggered ? '#00ff88' : 'var(--text-muted)', fontWeight: 600 }}>
+                          {alert.isTriggered ? 'TRIGGERED' : 'PENDING'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         {userPlan === 'free' && (
           <button onClick={onUpgrade} className="topbar-upgrade-btn">UPGRADE</button>
         )}
@@ -129,7 +237,13 @@ const TopBar: React.FC<TopBarProps> = ({
         )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); borderRadius: 10px; }
+      `}</style>
     </div>
   );
 };
