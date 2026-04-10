@@ -63,5 +63,31 @@ export const usePancakeSwap = () => {
     }
   };
 
-  return { getSwapQuote, approveToken };
+  const executeSwap = async (fromToken: string, toToken: string, amountIn: string, amountOutMin: string, address: string) => {
+    if (!window.ethereum) throw new Error("Wallet not connected");
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const router = new ethers.Contract(PANCAKESWAP_ROUTER, ROUTER_ABI, signer);
+    
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 mins
+    const fromAddress = fromToken.toLowerCase() === BNB_TOKENS.BNB.toLowerCase() ? WBNB : fromToken;
+    const toAddress = toToken.toLowerCase() === BNB_TOKENS.BNB.toLowerCase() ? WBNB : toToken;
+
+    let path;
+    if (fromToken.toLowerCase() === BNB_TOKENS.BNB.toLowerCase()) {
+      path = [WBNB, toAddress];
+      const tx = await router.swapExactETHForTokens(amountOutMin, path, address, deadline, { value: amountIn });
+      return await tx.wait();
+    } else if (toToken.toLowerCase() === BNB_TOKENS.BNB.toLowerCase()) {
+      path = [fromAddress, WBNB];
+      const tx = await router.swapExactTokensForETH(amountIn, amountOutMin, path, address, deadline);
+      return await tx.wait();
+    } else {
+      path = [fromAddress, WBNB, toAddress];
+      const tx = await router.swapExactTokensForTokens(amountIn, amountOutMin, path, address, deadline);
+      return await tx.wait();
+    }
+  };
+
+  return { getSwapQuote, approveToken, executeSwap };
 };

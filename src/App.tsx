@@ -10,12 +10,12 @@ import { useGroqChat } from './hooks/useGroqChat';
 import { useWallet, TOKEN_ADDRESSES } from './hooks/useWallet';
 import { useCryptoPrices } from './hooks/useCrypto';
 import { useContacts } from './hooks/useContacts';
-import { usePancakeSwap, BNB_TOKENS, WBNB } from './hooks/usePancakeSwap';
 import { useTransactionHistory } from './hooks/useTransactionHistory';
 import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
+import { usePancakeSwap, BNB_TOKENS, WBNB, PANCAKESWAP_ROUTER, ROUTER_ABI } from './hooks/usePancakeSwap';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import { Mic, MicOff } from 'lucide-react';
@@ -27,6 +27,12 @@ import { supabase } from './lib/supabase';
 let chartAnalysisInProgress = false;
 
 function App() {
+    useEffect(() => {
+        // Detect if the app is framed (bug in Trust Wallet frame disallowed)
+        if (window.self !== window.top) {
+            console.warn("DApp detected framing environment. Wallets like Trust Wallet may fail.");
+        }
+    }, []);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'agent' | 'signals'>('agent');
     const [mobileView, setMobileView] = useState<'chat' | 'panel'>('chat');
@@ -86,7 +92,7 @@ function App() {
 
     const { contacts, addContact, removeContact } = useContacts();
     const { history, saveTransaction } = useTransactionHistory();
-    const { getSwapQuote, approveToken } = usePancakeSwap();
+    const { getSwapQuote, approveToken, executeSwap } = usePancakeSwap();
     const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
 
     const {
@@ -624,18 +630,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             const pTo = isToEth ? WBNB : swapPreview.toTokenAddress;
             const path = [pFrom, pTo];
 
-            let tx: any;
-            const PANCAKESWAP_ROUTER = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-            const ROUTER_ABI = [
-                "function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline) external payable returns (uint[] memory amounts)",
-                "function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)",
-                "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)"
-            ];
-
-            const router = new ethers.Contract(PANCAKESWAP_ROUTER, ROUTER_ABI, signer);
-            const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 mins
             const amountIn = swapPreview.rawSwapData.amountWei;
-            const minAmountOut = 0; // In production, use slippage
+            const minAmountOut = "0"; // In production, use slippage
 
             if (!isFromEth) {
                 addSystemMessageProxy(`Checking allowance for **${swapPreview.fromToken}**...`);
@@ -643,15 +639,15 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 addSystemMessageProxy(`Token approved! Please sign the swap transaction...`);
             }
 
-            if (isFromEth) {
-                tx = await router.swapExactETHForTokens(minAmountOut, path, wallet.address, deadline, { value: amountIn });
-            } else if (isToEth) {
-                tx = await router.swapExactTokensForETH(amountIn, minAmountOut, path, wallet.address, deadline);
-            } else {
-                tx = await router.swapExactTokensForTokens(amountIn, minAmountOut, path, wallet.address, deadline);
-            }
+            const receipt = await executeSwap(
+                swapPreview.fromTokenAddress,
+                swapPreview.toTokenAddress,
+                amountIn,
+                minAmountOut,
+                wallet.address
+            );
 
-            const txHash = tx.hash;
+            const txHash = receipt.hash;
             addSystemMessageProxy(`Swap broadcasted! Hash: ${txHash.slice(0, 10)}... (Status: Pending)`);
 
             saveTransaction({
@@ -665,7 +661,6 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 network: 'BNB Smart Chain'
             });
 
-            await tx.wait();
             addSystemMessageProxy(`Swap successful! You received **${parseFloat(swapPreview.toAmount).toFixed(4)} ${swapPreview.toToken}**. [View on Explorer](${getExplorerUrl(txHash)})`);
 
             saveTransaction({
