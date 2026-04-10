@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Trash2, Bot, User, BarChart2, Flame, ShieldAlert, Zap, Send } from 'lucide-react';
+import { Trash2, Bot, User, BarChart2, Flame, ShieldAlert, Zap, Send, Mic, MicOff } from 'lucide-react';
 import type { Message } from '../types';
 
 interface ChatPanelProps {
@@ -95,21 +95,60 @@ const TypewriterMessage = ({ messageId, content }: { messageId: string, content:
 
 const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat }) => {
     const [input, setInput] = useState('');
+    const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const recognitionRef = useRef<any>(null);
+
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    const handleSend = () => {
-        if (!input.trim() || isLoading) return;
-        onSendMessage(input);
-        setInput('');
+    const handleSend = (textOverride?: string) => {
+        const textToSend = textOverride !== undefined ? textOverride : input;
+        if (!textToSend.trim() || isLoading) return;
+        onSendMessage(textToSend);
+        if (textOverride === undefined) setInput('');
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
         }
     };
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('Speech Recognition is not supported in this browser.');
+            return;
+        }
+
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onstart = () => setIsListening(true);
+        recognitionRef.current.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+        };
+        recognitionRef.current.onend = () => setIsListening(false);
+        recognitionRef.current.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                handleSend(transcript);
+            }
+        };
+
+        recognitionRef.current.start();
+    };
+
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -372,14 +411,37 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                         disabled={isLoading}
                     />
                     <button
+                        id="voice-btn"
+                        type="button"
+                        onClick={toggleListening}
+                        disabled={isLoading}
+                        className={isListening ? 'listening-pulse' : ''}
+                        style={{
+                            height: '44px',
+                            width: '46px',
+                            flexShrink: 0,
+                            borderRadius: '10px',
+                            border: isListening ? '1px solid #ff4466' : '1px solid var(--border-subtle)',
+                            background: isListening ? 'rgba(255,68,102,0.1)' : 'rgba(255,255,255,0.03)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        {isListening ? <MicOff size={18} color="#ff4466" /> : <Mic size={18} color="var(--text-muted)" />}
+                    </button>
+                    <button
                         id="send-btn"
                         className="send-btn"
-                        onClick={handleSend}
+                        onClick={() => handleSend()}
                         disabled={!input.trim() || isLoading}
                         style={{ height: '44px', width: '46px', flexShrink: 0 }}
                     >
                         <Send size={18} color="white" />
                     </button>
+
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
                     Press <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Enter</kbd> to send
