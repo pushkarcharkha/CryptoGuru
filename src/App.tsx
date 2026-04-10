@@ -18,7 +18,7 @@ import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
-import type { RightPanelView, SidebarFeature, TraderSignal, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
+import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
