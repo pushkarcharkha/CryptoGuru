@@ -1,4 +1,5 @@
-import React, { useState, ChangeEvent, FormEvent, CSSProperties } from 'react';
+import React, { useState } from 'react';
+import type { ChangeEvent, FormEvent, CSSProperties } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface ApplicationFormData {

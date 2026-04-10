@@ -84,58 +84,87 @@ const Row = ({ label, value, color = '#e2e8f0' }: {label: string, value: string,
   </div>
 );
 
-const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => (
-  <div style={{
-    background: '#111128',
-    border: '1px solid #1a1a3a',
-    borderRadius: '12px',
-    padding: '20px',
-    margin: '12px'
-  }}>
-    <h3 style={{ color: '#00ff88', marginBottom: '16px', marginTop: 0 }}>Position Preview</h3>
-    
-    {/* Market Context */}
-    <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-      <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Trend: {position.trend}</p>
-      <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Support: ${position.support}</p>
-      <p style={{ margin: '0', fontSize: '13px', color: '#e2e8f0' }}>Resistance: ${position.resistance}</p>
+const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => {
+  const [sl, setSl] = React.useState('');
+  const [tp, setTp] = React.useState('');
+
+  return (
+    <div style={{
+      background: '#111128',
+      border: '1px solid #1a1a3a',
+      borderRadius: '12px',
+      padding: '20px',
+      margin: '12px'
+    }}>
+      <h3 style={{ color: '#00ff88', marginBottom: '16px', marginTop: 0 }}>Position Preview</h3>
+      
+      {/* Market Context */}
+      <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+        <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Trend: {position.trend}</p>
+        <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Support: ${position.support}</p>
+        <p style={{ margin: '0', fontSize: '13px', color: '#e2e8f0' }}>Resistance: ${position.resistance}</p>
+      </div>
+      
+      {/* Position Details */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+        <Row label="Direction" value={position.direction.toUpperCase()} />
+        <Row label="Leverage" value={`${position.leverage}x`} />
+        <Row label="Size" value={`$${position.size}`} />
+        <Row label="Entry" value={`$${position.entryPrice}`} />
+        <Row label="Margin" value={`$${position.margin}`} />
+        <Row label="Liquidation" value={`$${position.liquidationPrice}`} color="#ff3366" />
+      </div>
+
+      {/* SL/TP Inputs */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Stop Loss Price</label>
+          <input 
+            type="number"
+            value={sl}
+            onChange={(e) => setSl(e.target.value)}
+            placeholder="None"
+            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Take Profit Price</label>
+          <input 
+            type="number"
+            value={tp}
+            onChange={(e) => setTp(e.target.value)}
+            placeholder="None"
+            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
+          />
+        </div>
+      </div>
+      
+      {/* Risk warning for high leverage */}
+      {position.leverage >= 10 && (
+        <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '16px' }}>
+          ⚠️ {position.leverage}x leverage — 
+          a {(100/position.leverage).toFixed(1)}% move against you = liquidation
+        </p>
+      )}
+      
+      {/* Confirm / Decline */}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button
+          onClick={() => onConfirm(sl ? parseFloat(sl) : undefined, tp ? parseFloat(tp) : undefined)}
+          style={{ flex: 1, background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', color: '#00ff88', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+        >
+          ✓ Confirm
+        </button>
+        <button
+          onClick={onDecline}
+          style={{ flex: 1, background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+        >
+          ✕ Decline
+        </button>
+      </div>
     </div>
-    
-    {/* Position Details */}
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-      <Row label="Direction" value={position.direction.toUpperCase()} />
-      <Row label="Leverage" value={`${position.leverage}x`} />
-      <Row label="Size" value={`$${position.size}`} />
-      <Row label="Entry" value={`$${position.entryPrice}`} />
-      <Row label="Margin" value={`$${position.margin}`} />
-      <Row label="Liquidation" value={`$${position.liquidationPrice}`} color="#ff3366" />
-    </div>
-    
-    {/* Risk warning for high leverage */}
-    {position.leverage >= 10 && (
-      <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '16px' }}>
-        ⚠️ {position.leverage}x leverage — 
-        a {(100/position.leverage).toFixed(1)}% move against you = liquidation
-      </p>
-    )}
-    
-    {/* Confirm / Decline */}
-    <div style={{ display: 'flex', gap: '10px' }}>
-      <button
-        onClick={onConfirm}
-        style={{ flex: 1, background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', color: '#00ff88', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-      >
-        ✓ Confirm
-      </button>
-      <button
-        onClick={onDecline}
-        style={{ flex: 1, background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-      >
-        ✕ Decline
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 
 
