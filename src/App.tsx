@@ -18,7 +18,7 @@ import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
-import type { RightPanelView, SidebarFeature, TraderSignal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
+import type { RightPanelView, SidebarFeature, TraderSignal, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
@@ -355,11 +355,16 @@ function App() {
         }
     }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, apiKey, fearGreedData, newsData]);
 
-    const handleConfirmFutures = async (sl?: number, tp?: number) => {
+    const handleConfirmFutures = async (sl?: any, tp?: any) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
+        
+        // Ensure arguments are numbers, not React Events
+        const finalSl = typeof sl === 'number' ? sl : undefined;
+        const finalTp = typeof tp === 'number' ? tp : undefined;
+
         try {
-            const pos = await openPosition(coin, direction, leverage, size, entryPrice, sl, tp);
+            const pos = await openPosition(coin, direction, leverage, size, entryPrice, finalSl, finalTp);
             setPendingFuturesPosition(null);
             setRightPanelView('futures');
             setManualPanelOverride('futures');
@@ -860,47 +865,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         }
     };
 
-    const handleSignalClick = (signal: TraderSignal) => {
-        setActiveTab('agent');
-        sendMessage(`Analyze the ${signal.coin} ${signal.direction} signal from ${signal.name}. Is it a good entry?`, {
-            address: wallet.address,
-            holdings: wallet.holdings,
-            contacts,
-            history,
-            watchlist: watchlistIds
-        }, {
-            fearGreed: fearGreedData,
-            news: newsData
-        }, {
-            balance: futuresBalance,
-            positions: futuresPositions
-        }, activeFeature);
-    };
+    // Deleted unused legacy signal handlers
 
-    const handleSignalAnalyzeOnly = (signal: TraderSignal) => {
-        setActiveTab('agent');
-        sendMessage(
-            `Analyze only this signal and provide insights: ${signal.coin} ${signal.direction} from ${signal.name}. Do not open or suggest executing any paper futures trade action. Just return analysis with entry zone, stop loss, target, risk, and confidence.`,
-            {
-                address: wallet.address,
-                holdings: wallet.holdings,
-                contacts,
-                history,
-                watchlist: watchlistIds
-            },
-            {
-                fearGreed: fearGreedData,
-                news: newsData
-            },
-            {
-                balance: futuresBalance,
-                positions: futuresPositions
-            },
-            activeFeature,
-            null,
-            { allowActions: false }
-        );
-    };
 
     // Dynamic signal handlers for the new Supabase-backed feed
     const handleCopyTrade = (signal: Signal) => {
@@ -982,7 +948,6 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         onToggle={() => setSidebarOpen((v) => !v)}
                         activeFeature={activeFeature}
                         onFeatureClick={handleFeatureClick}
-                        onSettingsClick={() => setSettingsOpen(true)}
                     />
                 </div>
 

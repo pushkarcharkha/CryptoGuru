@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, Settings } from 'lucide-react';
+import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen } from 'lucide-react';
 import type { SidebarFeature } from '../types';
 
 interface SidebarProps {
@@ -7,7 +7,6 @@ interface SidebarProps {
     onToggle: () => void;
     activeFeature: SidebarFeature | null;
     onFeatureClick: (feature: SidebarFeature, message: string) => void;
-    onSettingsClick: () => void;
 }
 
 const FEATURES: {
@@ -66,7 +65,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     onToggle,
     activeFeature,
     onFeatureClick,
-    onSettingsClick,
 }) => {
     return (
         <div
