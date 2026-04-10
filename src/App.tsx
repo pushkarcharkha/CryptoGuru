@@ -16,8 +16,8 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
-import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
+import { Mic, MicOff } from 'lucide-react';
 import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -29,6 +29,9 @@ function App() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'agent' | 'signals'>('agent');
     const [mobileView, setMobileView] = useState<'chat' | 'panel'>('chat');
+    const [isListeningMobile, setIsListeningMobile] = useState(false);
+    const recognitionMobileRef = useRef<any>(null);
+
     const [rightPanelView, setRightPanelView] = useState<RightPanelView>('prices');
     const [activeFeature, setActiveFeature] = useState<SidebarFeature | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -746,6 +749,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 }
             }
 
+            // --- Mobile Logic Hook ---
+            if (mobileView === 'panel') setMobileView('chat');
+
             // --- Chart Analysis Fixes ---
             const isChartViewRequest = (msg: string) => {
                 const viewOnly = ['show chart', 'open chart', 'show me chart', 'view chart'];
@@ -805,8 +811,43 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 positions: futuresPositions
             }, activeFeature);
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView]
     );
+
+    const toggleListeningMobile = () => {
+        if (isListeningMobile) {
+            recognitionMobileRef.current?.stop();
+            setIsListeningMobile(false);
+            return;
+        }
+
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('Speech Recognition is not supported in this browser.');
+            return;
+        }
+
+        recognitionMobileRef.current = new SpeechRecognition();
+        recognitionMobileRef.current.continuous = false;
+        recognitionMobileRef.current.interimResults = false;
+        recognitionMobileRef.current.lang = 'en-US';
+
+        recognitionMobileRef.current.onstart = () => setIsListeningMobile(true);
+        recognitionMobileRef.current.onerror = (event: any) => {
+            console.error('Mobile speech recognition error:', event.error);
+            setIsListeningMobile(false);
+        };
+        recognitionMobileRef.current.onend = () => setIsListeningMobile(false);
+        recognitionMobileRef.current.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            if (transcript) {
+                handleSendMessage(transcript);
+                setMobileView('chat');
+            }
+        };
+
+        recognitionMobileRef.current.start();
+    };
 
     // Background Price Alert Monitor
     useEffect(() => {
@@ -1014,22 +1055,43 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 />
                 
                 {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
-                <div className="mobile-quick-chat-container">
-                    <input 
-                        type="text" 
-                        placeholder="Type a command (e.g. short BTC 10x)..."
-                        className="mobile-quick-chat-input"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                handleSendMessage(e.currentTarget.value.trim());
-                                e.currentTarget.value = '';
-                                setMobileView('chat');
-                            }
-                        }}
-                    />
-                    <div style={{ position: 'absolute', right: '24px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none' }}>
-                        &#10148;
+                <div className="mobile-quick-chat-container" style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 16px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <input 
+                            type="text" 
+                            placeholder="Type a command..."
+                            className="mobile-quick-chat-input"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                    handleSendMessage(e.currentTarget.value.trim());
+                                    e.currentTarget.value = '';
+                                    setMobileView('chat');
+                                }
+                            }}
+                        />
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none', opacity: 0.5 }}>
+                            &#10148;
+                        </div>
                     </div>
+                    
+                    <button
+                        onClick={toggleListeningMobile}
+                        className={isListeningMobile ? 'listening-pulse' : ''}
+                        style={{
+                            height: '42px',
+                            width: '42px',
+                            borderRadius: '50%',
+                            border: isListeningMobile ? '1px solid #ff4466' : '1px solid rgba(255,255,255,0.1)',
+                            background: isListeningMobile ? 'rgba(255,68,102,0.1)' : 'rgba(0,0,0,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                        }}
+                    >
+                        {isListeningMobile ? <MicOff size={18} color="#ff4466" /> : <Mic size={18} color="rgba(255,255,255,0.6)" />}
+                    </button>
                 </div>
 
                 </div>
