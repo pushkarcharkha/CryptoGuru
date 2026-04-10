@@ -24,7 +24,11 @@ const Login: React.FC = () => {
         });
 
         if (error) {
-            setError(error.message);
+            if (error.message.includes('rate limit')) {
+                setError('Login rate limit exceeded. Please wait a few minutes and try again.');
+            } else {
+                setError(error.message);
+            }
         }
         else {
             if (data.user.email === ADMIN_EMAIL) {
@@ -41,10 +45,20 @@ const Login: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({ 
         provider: 'google', 
-        options: { redirectTo: window.location.origin + '/app' } 
+        options: { 
+          redirectTo: window.location.origin + '/app',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        } 
       });
-      if (error) setError(error.message);
+      if (error) {
+        console.error('Google Login Error:', error);
+        setError(`Google Login Error: ${error.message}. Please check your Supabase Dashboard configuration.`);
+      }
     } catch (err: any) {
+      console.error('Google Login Catch Error:', err);
       setError(err.message || 'An error occurred during Google sign in');
     }
   };
