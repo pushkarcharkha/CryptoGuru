@@ -15,7 +15,7 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
-import { usePancakeSwap, BNB_TOKENS, WBNB, PANCAKESWAP_ROUTER, ROUTER_ABI } from './hooks/usePancakeSwap';
+import { usePancakeSwap, BNB_TOKENS } from './hooks/usePancakeSwap';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import { Mic, MicOff } from 'lucide-react';
@@ -619,17 +619,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
         try {
             addSystemMessageProxy(`Preparing swap of **${swapPreview.fromAmount} ${swapPreview.fromToken}** for **${swapPreview.toToken}**...`);
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            // Check for native BNB
-            const isFromEth = swapPreview.fromTokenAddress === BNB_TOKENS.BNB;
-            const isToEth = swapPreview.toTokenAddress === BNB_TOKENS.BNB;
-
-            const pFrom = isFromEth ? WBNB : swapPreview.fromTokenAddress;
-            const pTo = isToEth ? WBNB : swapPreview.toTokenAddress;
-            const path = [pFrom, pTo];
-
+            const isFromEth = swapPreview.fromTokenAddress.toLowerCase() === BNB_TOKENS.BNB.toLowerCase();
             const amountIn = swapPreview.rawSwapData.amountWei;
             const minAmountOut = "0"; // In production, use slippage
 
@@ -638,6 +628,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 await approveToken(swapPreview.fromTokenAddress, amountIn);
                 addSystemMessageProxy(`Token approved! Please sign the swap transaction...`);
             }
+
+            if (!wallet.address) throw new Error("Wallet not connected");
 
             const receipt = await executeSwap(
                 swapPreview.fromTokenAddress,
