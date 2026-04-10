@@ -16,6 +16,7 @@ import { useWatchlist } from './hooks/useWatchlist';
 import { useNews } from './hooks/useNews';
 import { useFutures, SUPPORTED_FUTURES_COINS } from './hooks/useFutures';
 import { useAlerts } from './hooks/useAlerts';
+import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import { Mic, MicOff } from 'lucide-react';
 import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
