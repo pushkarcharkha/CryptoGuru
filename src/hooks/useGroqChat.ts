@@ -348,6 +348,7 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
               params[k] = v;
             }
           });
+          // Handle Internal Actions (None here, handle in handleAIAction)
           onActionDetectedRef.current(type, params);
           aiContent = aiContent.replace(/\[\[ACTION:.*?\]\]/g, '').trim();
         } else if (actionMatch) {
