@@ -27,7 +27,7 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
     const handleTaskComplete = (success: boolean) => {
         if (success) {
             setTaskSuccess(true);
-            setUserFeedback(lesson.chartTasks[0].successMessage);
+            setUserFeedback(lesson.chartTasks?.[0]?.successMessage || 'Task completed!');
         } else {
             const nextAttempts = attempts + 1;
             setAttempts(nextAttempts);
@@ -49,7 +49,7 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
         setTimeout(() => setPhase('result'), 2000); // Transition to result after animation
     };
 
-    const isCorrect = simAction === lesson.simulation.correctAction;
+    const isCorrect = simAction === lesson.simulation?.correctAction;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0b0b14', color: '#e2e8f0' }}>
@@ -123,7 +123,7 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
                             <ShieldCheck size={14} /> 02. Technical Task
                         </div>
                         <div style={{ padding: '20px', background: 'rgba(0, 212, 255, 0.03)', borderRadius: '12px', border: '1px solid rgba(0, 212, 255, 0.1)', position: 'relative' }}>
-                            <p style={{ color: '#fff', fontSize: '14px', fontWeight: 600, lineHeight: 1.5, marginBottom: '16px' }}>{lesson.chartTasks[0].instruction}</p>
+                            <p style={{ color: '#fff', fontSize: '14px', fontWeight: 600, lineHeight: 1.5, marginBottom: '16px' }}>{lesson.chartTasks?.[0]?.instruction}</p>
                             
                             {taskSuccess ? (
                                 <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 700, background: 'rgba(16, 185, 129, 0.05)', padding: '12px', borderRadius: '8px' }}>
@@ -132,7 +132,7 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
                             ) : (
                                 <div style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#64748b' }}>
                                     <Info size={16} style={{ flexShrink: 0 }} />
-                                    <span>{lesson.chartTasks[0].hint}</span>
+                                    <span>{lesson.chartTasks?.[0]?.hint}</span>
                                 </div>
                             )}
 
@@ -200,10 +200,10 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
                                         {isCorrect ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
                                         {isCorrect ? 'Professional Analysis' : 'Lessons Learned'}
                                     </div>
-                                    <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#cbd5e1', marginBottom: '16px' }}>{lesson.simulation.feedback.analysis}</p>
+                                    <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#cbd5e1', marginBottom: '16px' }}>{lesson.simulation?.feedback?.analysis || lesson.simulation?.explanation}</p>
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
                                         <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Market Reasoning</div>
-                                        <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#94a3b8' }}>{lesson.simulation.feedback.reasoning}</p>
+                                        <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#94a3b8' }}>{lesson.simulation?.feedback?.reasoning || 'Continue practicing to master this pattern.'}</p>
                                     </div>
                                 </div>
                                 
@@ -257,13 +257,13 @@ export const LearnSimulator: React.FC<LearnSimulatorProps> = ({ lesson, onBack, 
                         <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div style={{ width: '95%', height: '85%' }}>
                                 <LearningChart 
-                                    data={lesson.simulation.snapshotData} 
-                                    task={(phase === 'task' || phase === 'concept') && !revealAnswer ? lesson.chartTasks[0] : undefined}
+                                    data={lesson.simulation?.snapshotData || []} 
+                                    task={(phase === 'task' || phase === 'concept') && !revealAnswer ? lesson.chartTasks?.[0] : undefined}
                                     onTaskComplete={handleTaskComplete}
                                     showSimulation={showFuture}
-                                    futureData={lesson.simulation.futureData}
+                                    futureData={lesson.simulation?.futureData || []}
                                     showAnswer={revealAnswer}
-                                    answerRange={lesson.chartTasks[0].targetPriceRange}
+                                    answerRange={lesson.chartTasks?.[0]?.targetPriceRange}
                                 />
                             </div>
                         </div>

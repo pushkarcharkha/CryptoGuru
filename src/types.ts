@@ -168,24 +168,27 @@ export type SidebarFeature =
     | 'backtest'
     | 'strategies';
 
-export interface AcademyLesson {
+export interface Lesson {
     id: string;
     title: string;
     hook: string;
-    theory: string; // 3-5 lines max
-    explanation: string; // Detailed context
-    learningGoals: string[];
-    activityOverview: string;
+    theory?: string; 
+    explanation: string; 
+    learningGoals?: string[];
+    activityOverview?: string;
     realExample: string;
-    actionableRule: string;
+    actionableRule?: string;
     level: 'Beginner' | 'Intermediate' | 'Advanced';
     category: string;
-    chartTasks: ChartTask[];
-    simulation: SimulationStep;
+    chartTasks?: ChartTask[];
+    simulation?: SimulationStep;
     quiz?: QuizQuestion[];
+    isSimulator?: boolean;
+    xpReward?: number;
 }
 
-export type SimulatorLesson = SimulationStep;
+export type SimulatorLesson = Lesson;
+export type AcademyLesson = Lesson;
 export interface AcademySubsection {
     id: string;
     title: string;
@@ -213,7 +216,8 @@ export interface SimulationStep {
     snapshotData: any[]; // OHLC data up to the moment of decision
     futureData: any[];   // "The move" that plays out after the decision
     correctAction: 'buy' | 'sell' | 'wait';
-    feedback: {
+    explanation?: string;
+    feedback?: {
         analysis: string;
         correctApproach: string;
         reasoning: string;
