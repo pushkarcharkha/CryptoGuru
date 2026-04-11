@@ -55,7 +55,7 @@ function App() {
     const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
-    const [patternOverlay] = useState<ChartPatternOverlay | null>(null);
+    const [patternOverlay, setPatternOverlay] = useState<ChartPatternOverlay | null>(null);
 
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
@@ -100,7 +100,7 @@ function App() {
     const { getSwapQuote, approveToken, executeSwap } = usePancakeSwap();
     const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
 
-    const { memory } = useUserMemory();
+    const { memory, refreshMemory } = useUserMemory();
 
     const {
         newsData,
@@ -260,7 +260,6 @@ function App() {
                     const response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=30`);
                     if (!response.ok) throw new Error('Failed to fetch chart data');
                     const ohlcv = await response.json();
-
                     const candles = ohlcv.map((d: any) => ({ low: d[3], high: d[2], close: d[4] }));
                     const support = Math.min(...candles.slice(-20).map((c: any) => c.low));
                     const resistance = Math.max(...candles.slice(-20).map((c: any) => c.high));
@@ -312,6 +311,7 @@ function App() {
     
     Be direct and specific. No generic advice.
   `;
+                    
 
                     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
@@ -323,6 +323,7 @@ function App() {
                             max_tokens: 300
                         })
                     });
+                    
 
                     if (groqRes.ok) {
                         const aiData = await groqRes.json();
@@ -378,6 +379,7 @@ function App() {
     const handleConfirmFutures = async (sl?: any, tp?: any) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
+        
 
         // Ensure arguments are numbers, not React Events
         const finalSl = typeof sl === 'number' ? sl : undefined;
@@ -458,6 +460,10 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 balance: futuresBalance,
                 positions: futuresPositions
             }, 'chart', stats, { hidden: true });
+
+            if (stats.patterns) {
+                setPatternOverlay(stats.patterns);
+            }
             setMobileView('chat');
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
@@ -608,6 +614,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             });
 
             refreshBalances();
+            refreshMemory();
 
         } catch (err: any) {
             console.error('Transaction Error:', err);
@@ -686,6 +693,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             setSwapPreview(null);
             setRightPanelView('history');
             refreshBalances();
+            refreshMemory();
 
         } catch (err: any) {
             console.error('Swap Error:', err);
@@ -733,12 +741,12 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             // --- Alert Detection ---
             const alertRegex = /(?:notify|alert|tell) me (?:when|if) ([a-zA-Z]+) (?:crosses|hits|is|goes|above|below|over|under)\s*([<>]?\s*[\d,.]+)/i;
             const alertMatch = content.match(alertRegex);
+            
 
             if (alertMatch) {
                 const coinStr = alertMatch[1].toLowerCase();
                 const priceStr = alertMatch[2].replace(/[$,]/g, '');
                 const price = parseFloat(priceStr);
-
                 const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coinStr || c.name.toLowerCase() === coinStr);
 
                 if (coinObj && !isNaN(price)) {
@@ -873,6 +881,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             if (triggered) {
                 markAsTriggered(alert.id);
                 addSystemMessageProxy(`🔔 **ALERT TRIGGERED:** ${alert.symbol.toUpperCase()} has reached **$${currentPrice.toLocaleString()}** (Target: $${alert.targetPrice.toLocaleString()})`);
+                
 
                 // Also try native notification
                 if (Notification.permission === 'granted') {
@@ -1000,13 +1009,14 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                     {activeFeature === 'learn' ? (
-                        <LearnPanel
+                        <LearnPanel 
                             onOpenAssistant={(lesson: AcademyLesson) => {
                                 setRightPanelView('learn-assistant');
                                 // Hidden instruction to AI to contextualize as a teacher for this lesson
-                                const contextMsg = `The user is now studying: ${lesson.title} (${lesson.level}). 
-                                Summary of lesson: ${lesson.explanation.substring(0, 100)}...
-                                Act as a teacher. If the user asks questions, explain clearly and use analogies.`;
+                                const contextMsg = `[ACADEMY_CONTEXT]
+                                Lesson: ${lesson.title} (${lesson.level})
+                                Summary: ${lesson.explanation.substring(0, 100)}...
+                                HANDSHAKE: Provide a brief, friendly greeting as the specialized AI tutor for this specific lesson.`;
 
                                 sendMessage(contextMsg, {
                                     address: wallet.address,
@@ -1021,7 +1031,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                     balance: futuresBalance,
                                     positions: futuresPositions
                                 }, 'learn', null, { hidden: true });
-                            }}
+                            }} 
+
                             onTryOnMarket={(lesson: AcademyLesson) => {
                                 setActiveFeature('chart');
                                 setRightPanelView('coin-chart');
@@ -1055,8 +1066,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         wallet={wallet}
                         transactionPreview={transactionPreview}
                         contacts={contacts}
-                        onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
-                        onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
+                        onContactSendClick={(name: string) => handleSendMessage(`Send to ${name}`)}
+                        onContactDeleteClick={(name: string) => handleSendMessage(`Delete contact ${name}`)}
                         onConfirmTransactionClick={handleConfirmTransaction}
                         onConfirmSwapClick={handleConfirmSwap}
                         swapPreview={swapPreview}
@@ -1068,7 +1079,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         isInWatchlist={isInWatchlist}
                         watchlistLoading={watchlistLoading}
                         watchlistLastUpdated={watchlistLastUpdated}
-                        onCoinClick={(coin) => {
+                        onCoinClick={(coin: CoinGeckoCoin) => {
                             const currentView = manualPanelOverride || rightPanelView;
                             if (currentView === 'coin-chart') {
                                 setActiveCoin(coin);
@@ -1138,6 +1149,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                             {isListeningMobile ? <MicOff size={18} color="#ff4466" /> : <Mic size={18} color="rgba(255,255,255,0.6)" />}
                         </button>
                     </div>
+
 
                 </div>
             </div>

@@ -170,7 +170,8 @@ export interface AcademyLesson {
     id: string;
     title: string;
     hook: string;
-    explanation: string;
+    theory: string; // 3-5 lines max
+    explanation: string; // Detailed context
     learningGoals: string[];
     activityOverview: string;
     realExample: string;
@@ -183,7 +184,6 @@ export interface AcademyLesson {
 }
 
 export type SimulatorLesson = SimulationStep;
-
 export interface AcademySubsection {
     id: string;
     title: string;
