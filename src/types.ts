@@ -35,7 +35,8 @@ export type RightPanelView =
     | 'history'
     | 'news-sentiment'
     | 'futures'
-    | 'futures-confirm';
+    | 'futures-confirm'
+    | 'learn-assistant';
 
 export interface AppTransaction {
     id: string;
@@ -160,7 +161,69 @@ export type SidebarFeature =
     | 'morning'
     | 'journal'
     | 'news-sentiment'
-    | 'futures';
+    | 'futures'
+    | 'learn';
+
+export interface AcademyLesson {
+    id: string;
+    title: string;
+    hook: string;
+    explanation: string;
+    learningGoals: string[];
+    activityOverview: string;
+    realExample: string;
+    actionableRule: string;
+    level: 'Beginner' | 'Intermediate' | 'Advanced';
+    category: string;
+    chartTasks: ChartTask[];
+    simulation: SimulationStep;
+}
+
+export interface AcademySubsection {
+    id: string;
+    title: string;
+    lessons: AcademyLesson[];
+}
+
+export interface AcademyModule {
+    id: string;
+    title: string;
+    description: string;
+    subsections: AcademySubsection[];
+}
+
+export interface ChartTask {
+    type: 'identify-sr' | 'predict-next' | 'mark-breakout';
+    instruction: string;
+    targetPriceRange?: [number, number];
+    targetTimeRange?: [number, number];
+    requiredProfit?: number;
+    hint: string;
+    successMessage: string;
+}
+
+export interface SimulationStep {
+    snapshotData: any[]; // OHLC data up to the moment of decision
+    futureData: any[];   // "The move" that plays out after the decision
+    correctAction: 'buy' | 'sell' | 'wait';
+    feedback: {
+        analysis: string;
+        correctApproach: string;
+        reasoning: string;
+    };
+}
+
+export interface UserProgress {
+    completedLessonIds: string[];
+}
+
+export interface QuizQuestion {
+    id: string;
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+}
 
 export interface NewsArticle {
     title: string;
