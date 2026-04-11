@@ -12,16 +12,16 @@ export interface RSSArticle {
 
 const RSS_FEEDS = [
   {
+    name: 'Watcher Guru',
+    url: 'https://api.rss2json.com/v1/api.json?rss_url=https://watcher.guru/news/feed'
+  },
+  {
     name: 'CoinDesk',
     url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.coindesk.com/arc/outboundfeeds/rss/'
   },
   {
-    name: 'CoinTelegraph', 
-    url: 'https://api.rss2json.com/v1/api.json?rss_url=https://cointelegraph.com/rss'
-  },
-  {
-    name: 'Decrypt',
-    url: 'https://api.rss2json.com/v1/api.json?rss_url=https://decrypt.co/feed'
+    name: 'The Block',
+    url: 'https://api.rss2json.com/v1/api.json?rss_url=https://www.theblock.co/rss.xml'
   }
 ];
 
@@ -34,6 +34,7 @@ const fetchRSSNews = async (): Promise<RSSArticle[]> => {
     try {
       const response = await fetch(feed.url);
       const data = await response.json();
+      console.log(`Feed: ${feed.name}, status: ${data.status}, items: ${data.items?.length || 0}`);
       
       if (data.status === 'ok' && data.items) {
         const articles = data.items.map((item: any) => ({
@@ -64,7 +65,9 @@ const fetchRSSNews = async (): Promise<RSSArticle[]> => {
     'bitcoin', 'btc', 'ethereum', 'eth', 'crypto', 'blockchain',
     'defi', 'nft', 'web3', 'solana', 'bnb', 'binance', 'altcoin',
     'token', 'wallet', 'exchange', 'stablecoin', 'cardano', 'ripple',
-    'xrp', 'polygon', 'dogecoin', 'avalanche', 'chainlink', 'trading'
+    'xrp', 'polygon', 'dogecoin', 'avalanche', 'chainlink', 'trading',
+    'ai', 'nvidia', 'fed', 'macro', 'sec', 'inflation', 'stock', 'etf',
+    'regulation', 'governance', 'economy', 'sam altman', 'openai'
   ];
 
   return allArticles.filter(article =>
