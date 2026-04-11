@@ -559,16 +559,15 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             if (feature === 'portfolio') {
                 setRightPanelView('portfolio');
                 setManualPanelOverride('portfolio');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
+                // Silent - recommendations shown in chat
             } else if (feature === 'wallet') {
                 setRightPanelView('contacts');
                 setManualPanelOverride('contacts');
-                addSystemMessage("Here are your saved contacts. You can add someone by saying 'add [name] [wallet address]'.");
+                // Silent - just open contacts panel
             } else if (feature === 'watchlist') {
                 setRightPanelView('watchlist');
                 setManualPanelOverride('watchlist');
-                // DO NOT call sendMessage here
-                // Complete silence — just open the panel
+                // Silent - just open the panel
             } else if (feature === 'chart') {
                 setActiveCoin(null);
                 setRightPanelView('coin-chart');
@@ -577,7 +576,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'journal') {
                 setRightPanelView('history');
                 setManualPanelOverride('history');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
+                // Silent - recommendations shown in chat
             } else if (feature === 'strategies') {
                 setRightPanelView('strategies');
                 setManualPanelOverride('strategies');
@@ -589,18 +588,18 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'futures') {
                 setRightPanelView('futures');
                 setManualPanelOverride('futures');
-                addSystemMessage("You're in paper futures mode. You can open long or short positions with leverage. Try saying 'open a long BTC position with 10x leverage for $100'");
+                // Silent - recommendations shown in chat
             } else if (feature === 'learn') {
                 setRightPanelView('learn-assistant');
                 setManualPanelOverride('learn-assistant');
-                addSystemMessage("Welcome to the Learn Hub! I'm your AI Tutor. Feel free to ask me anything about the lessons.");
+                // Silent - user will pick a lesson
             } else if (feature === 'backtest') {
                 setActiveTab('agent');
                 // No message needed, just open the dashboard
             } else {
                 setRightPanelView('prices');
                 setManualPanelOverride('prices');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
+                // Silent
             }
         },
         [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions, memory, language]
@@ -1141,6 +1140,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                 onClearChat={() => clearMessages(language)}
                                 placeholder={t.placeholder}
                                 language={language}
+                                activeFeature={activeFeature}
                             />
                         ) : (
                             <SignalFeed onCopyTrade={handleCopyTrade} onAnalyzeClick={handleDynamicSignalAnalyze} />

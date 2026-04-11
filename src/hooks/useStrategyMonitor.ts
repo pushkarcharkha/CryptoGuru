@@ -108,13 +108,23 @@ export const useStrategyMonitor = (addSystemMessage: (msg: string) => void, onNo
         
         for (const coin of coinsToScan) {
             const coinId = COIN_IDS[coin.toUpperCase()] || (coin === 'ANY' ? 'bitcoin' : coin.toLowerCase());
+            const symbol = (coin === 'ANY' ? 'BTC' : coin.toUpperCase()) + 'USDT';
             
             try {
-                // Fetch OHLCV (1h timeframe = 30 days of data)
-                const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=30`);
+                // Fetch OHLCV from Binance (1d timeframe, 30 days)
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=30`);
                 if (!res.ok) continue;
-                const ohlcv = await res.json();
-                const closes = ohlcv.map((d: any) => d[4]);
+                const binanceData = await res.json();
+                
+                // Binance structure: [time, open, high, low, close, volume, ...] all as strings
+                const ohlcv = binanceData.map((d: any[]) => [
+                    d[0],
+                    parseFloat(d[1]), // open
+                    parseFloat(d[2]), // high
+                    parseFloat(d[3]), // low
+                    parseFloat(d[4])  // close
+                ]);
+                const closes = ohlcv.map((d: any[]) => d[4]);
                 const currentPrice = closes[closes.length - 1];
 
                 const relevantStrategies = active.filter(s => s.coin === coin || (s.coin === 'ANY' && coin === 'BTC'));

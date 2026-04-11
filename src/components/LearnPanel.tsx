@@ -36,7 +36,7 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
         setActiveLesson(lesson);
         setPreviewMode(true);
         setSimulatorMode(false);
-        onOpenAssistant(lesson);
+        // Don't auto-call onOpenAssistant; user will click button to open AI chat
     };
 
     const handleStartSimulation = () => {
@@ -70,7 +70,7 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
             setActiveLesson(next);
             setPreviewMode(true);
             setSimulatorMode(false);
-            onOpenAssistant(next);
+            // Don't auto-send; user can click Ask AI Tutor if needed
         } else {
             setSimulatorMode(false);
             setPreviewMode(false);
@@ -222,30 +222,55 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
                             </div>
                         </div>
 
-                        <button 
-                            onClick={handleStartSimulation}
-                            style={{ 
-                                width: '100%', 
-                                padding: '24px', 
-                                background: 'linear-gradient(135deg, #00d4ff, #8b5cf6)', 
-                                color: '#000', 
-                                border: 'none', 
-                                borderRadius: '16px', 
-                                fontWeight: 900, 
-                                fontSize: '18px', 
-                                cursor: 'pointer', 
-                                boxShadow: '0 10px 40px rgba(0, 212, 255, 0.2)', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '16px',
-                                transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                        >
-                            <Play size={24} fill="currentColor" /> Enter Simulation Environment
-                        </button>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            <button 
+                                onClick={handleStartSimulation}
+                                style={{ 
+                                    flex: 1,
+                                    padding: '20px', 
+                                    background: 'linear-gradient(135deg, #00d4ff, #8b5cf6)', 
+                                    color: '#000', 
+                                    border: 'none', 
+                                    borderRadius: '16px', 
+                                    fontWeight: 900, 
+                                    fontSize: '16px', 
+                                    cursor: 'pointer', 
+                                    boxShadow: '0 10px 40px rgba(0, 212, 255, 0.2)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '12px',
+                                    transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <Play size={20} fill="currentColor" /> Enter Simulation
+                            </button>
+                            <button 
+                                onClick={() => onOpenAssistant(activeLesson)}
+                                style={{ 
+                                    padding: '20px 24px',
+                                    background: 'rgba(139, 92, 246, 0.1)', 
+                                    color: '#8b5cf6', 
+                                    border: '1px solid rgba(139, 92, 246, 0.3)', 
+                                    borderRadius: '16px', 
+                                    fontWeight: 800, 
+                                    fontSize: '14px', 
+                                    cursor: 'pointer', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '10px',
+                                    transition: 'all 0.2s',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)'; e.currentTarget.style.borderColor = '#8b5cf6'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)'; }}
+                            >
+                                🤖 Ask AI Tutor
+                            </button>
+                        </div>
                     </div>
                 ) : null}
             </div>

@@ -27,12 +27,10 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
       const currentPrice = prices?.[p.coinId]?.usd || p.entryPrice;
       const priceChange = currentPrice - p.entryPrice;
       const priceChangePercent = priceChange / p.entryPrice;
-      let pnl;
-      if (p.direction === 'long') {
-        pnl = p.size * priceChangePercent * p.leverage;
-      } else {
-        pnl = p.size * (-priceChangePercent) * p.leverage;
-      }
+      // pos.size = margin * leverage, so PnL = size * priceChangePercent (leverage already baked in)
+      const pnl = p.direction === 'long'
+        ? p.size * priceChangePercent
+        : p.size * (-priceChangePercent);
       return sum + pnl;
     } else {
       return sum + (p.pnl || 0);
@@ -90,12 +88,10 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
               const currentPrice = prices?.[pos.coinId]?.usd || pos.entryPrice;
               const priceChange = currentPrice - pos.entryPrice;
               const priceChangePercent = priceChange / pos.entryPrice;
-              let pnl;
-              if (pos.direction === 'long') {
-                pnl = pos.size * priceChangePercent * pos.leverage;
-              } else {
-                pnl = pos.size * (-priceChangePercent) * pos.leverage;
-              }
+              // pos.size = margin * leverage; leverage already baked in
+              const pnl = pos.direction === 'long'
+                ? pos.size * priceChangePercent
+                : pos.size * (-priceChangePercent);
               const pnlPercent = (pnl / pos.margin) * 100;
               const isCloseToLiq = pos.direction === 'long' 
                 ? (currentPrice - pos.liquidationPrice) / pos.entryPrice < 0.05
