@@ -13,6 +13,12 @@ import {
   type PortfolioHoldingInput,
   type CoinResearch,
 } from './useResearchEngine';
+import {
+  detectEmotionalTrigger,
+  buildMemoryBlock,
+  updateUserMemory,
+  type UserMemory,
+} from './useUserMemory';
 
 export function useGroqChat(apiKey: string, onActionDetected?: (action: string, params: Record<string, string>) => void | Promise<void>, onRequireUpgrade?: () => void) {
   const onActionDetectedRef = useRef(onActionDetected);
@@ -66,7 +72,8 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       options?: {
         allowActions?: boolean;
         hidden?: boolean;
-      }
+      },
+      userMemory?: UserMemory | null,
     ) => {
       if (!content.trim() || isLoading) return;
 
@@ -142,7 +149,38 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
       const futuresIntent = agent === 'FUTURES' ? detectFuturesIntent(content) : undefined;
       console.log(`🤖 Agent Router → Using agent: ${agent} (sidebar: ${activeFeature || 'none'})${futuresIntent ? ` [futures intent: ${futuresIntent}]` : ''}`);
 
-      // ── 1b. Research Engine — intercept portfolio / investment queries ──
+      // ── 1b. Memory Engine — detect emotional triggers + coin mentions ─────
+      const emotionalTrigger = detectEmotionalTrigger(content);
+      if (emotionalTrigger) {
+        // Track in background
+        updateUserMemory({
+          type: 'emotional_trigger',
+          trigger:
+            emotionalTrigger === 'fomo' ? 'FOMO detected' :
+            emotionalTrigger === 'panic' ? 'panic selling detected' :
+            'revenge trading detected',
+        });
+      }
+
+      // Detect coin mentions and track preferred coins in background
+      const TRACKED_COINS = ['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'AVAX', 'LINK', 'DOT', 'XRP', 'DOGE', 'MATIC'];
+      const msgUpper = content.toUpperCase();
+      const mentionedCoin = TRACKED_COINS.find(c => msgUpper.includes(c));
+      if (mentionedCoin) {
+        updateUserMemory({ type: 'coin_mentioned', coin: mentionedCoin });
+      }
+
+      // Build emotional trigger context addon
+      let emotionalInjection = '';
+      if (emotionalTrigger === 'fomo') {
+        emotionalInjection = '\n[EMOTIONAL CONTEXT] User may be experiencing FOMO right now. Gently acknowledge this before giving trade advice. Reference their past patterns if relevant.';
+      } else if (emotionalTrigger === 'panic') {
+        emotionalInjection = '\n[EMOTIONAL CONTEXT] User may be panic selling. Remind them of their past winning patterns before they act impulsively.';
+      } else if (emotionalTrigger === 'revenge') {
+        emotionalInjection = '\n[EMOTIONAL CONTEXT] User may be revenge trading after a loss. This is in their common mistakes pattern. Warn them specifically and clearly.';
+      }
+
+      // ── 1c. Research Engine — intercept portfolio / investment queries ──
       const researchDetection = detectResearchIntent(content);
       let researchInjection = '';  // extra block appended to system prompt when research runs
 
@@ -266,6 +304,7 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
         sentimentBlock,
         newsBlock,
         userContextBlock,
+        memoryBlock: buildMemoryBlock(userMemory ?? null),
         walletAddress: walletContext?.address,
         holdings,
         contacts: contactsStr,
@@ -277,7 +316,7 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
         futuresIntent,
       };
 
-      const systemPrompt = buildAgentPrompt(agent, agentContext) + researchInjection;
+      const systemPrompt = buildAgentPrompt(agent, agentContext) + researchInjection + emotionalInjection;
 
       // ── 7. Send to Groq ───────────────────────────────────────────────
       try {
