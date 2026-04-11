@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen } from 'lucide-react';
+import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, GraduationCap } from 'lucide-react';
 import type { SidebarFeature } from '../types';
 
 interface SidebarProps {
@@ -57,6 +57,12 @@ const FEATURES: {
             icon: <BookOpen size={20} />,
             label: 'Trade Journal',
             message: 'Help me review my recent trading decisions. What patterns do you notice and how can I improve my strategy?',
+        },
+        {
+            id: 'learn',
+            icon: <GraduationCap size={20} />,
+            label: 'Learn Hub',
+            message: 'Welcome to the Learn Hub! I am your AI Crypto Teacher. What would you like to learn today?',
         },
     ];
 
