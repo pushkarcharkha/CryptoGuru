@@ -23,6 +23,7 @@ import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPr
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
+import { DisclaimerModal } from './components/DisclaimerModal';
 
 let chartAnalysisInProgress = false;
 
@@ -58,6 +59,9 @@ function App() {
 
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [userData, setUserData] = useState<{ id: string, email: string } | null>(null);
+    const [showDisclaimer, setShowDisclaimer] = useState(() => {
+        return sessionStorage.getItem('disclaimer_accepted') !== 'true';
+    });
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -1138,6 +1142,13 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     userId={userData?.id}
                     userEmail={userData?.email}
                 />
+            )}
+
+            {showDisclaimer && (
+                <DisclaimerModal onAccept={() => {
+                    sessionStorage.setItem('disclaimer_accepted', 'true');
+                    setShowDisclaimer(false);
+                }} />
             )}
         </div>
     );
