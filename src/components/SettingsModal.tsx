@@ -5,9 +5,11 @@ interface SettingsModalProps {
   apiKey: string;
   onSave: (groqKey: string) => void;
   onClose: () => void;
+  language?: 'english' | 'hindi';
+  onLanguageChange?: (lang: 'english' | 'hindi') => void;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ apiKey, onSave, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ apiKey, onSave, onClose, language = 'english', onLanguageChange }) => {
   const [keyInput, setKeyInput] = useState(apiKey);
   const [showKey, setShowKey] = useState(false);
 
@@ -178,6 +180,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ apiKey, onSave, onClose }
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             via Groq · Ultra-fast inference
           </div>
+        </div>
+
+        {/* Language Selection */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3 style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 600, marginBottom: '12px' }}>AI Language / भाषा</h3>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => onLanguageChange?.('english')}
+              style={{
+                flex: 1,
+                background: language === 'english' ? 'rgba(0,255,136,0.1)' : 'rgba(0,0,0,0.2)',
+                border: `1px solid ${language === 'english' ? '#00ff88' : 'rgba(255,255,255,0.1)'}`,
+                color: language === 'english' ? '#00ff88' : '#cbd5e1',
+                padding: '10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+            >
+              🇬🇧 English
+            </button>
+            <button
+              onClick={() => onLanguageChange?.('hindi')}
+              style={{
+                flex: 1,
+                background: language === 'hindi' ? 'rgba(0,255,136,0.1)' : 'rgba(0,0,0,0.2)',
+                border: `1px solid ${language === 'hindi' ? '#00ff88' : 'rgba(255,255,255,0.1)'}`,
+                color: language === 'hindi' ? '#00ff88' : '#cbd5e1',
+                padding: '10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+            >
+              🇮🇳 हिंदी
+            </button>
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '8px' }}>
+            {language === 'hindi' ? 'AI आपसे हिंदी में बात करेगा' : 'AI will respond in English'}
+          </p>
         </div>
 
         {/* Buttons */}

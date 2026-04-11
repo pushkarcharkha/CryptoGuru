@@ -69,6 +69,7 @@ export interface AgentContext {
   newsBlock: string;
   userContextBlock: string;
   memoryBlock: string;  // ← user behavior profile for personalization
+  language: 'english' | 'hindi';
 
   // Raw data for agent-specific access
   walletAddress?: string | null;
@@ -426,6 +427,24 @@ ${ACTIONS_PROTOCOL}
 };
 
 /**
+ * Language instructions handler
+ */
+const getLanguageInstruction = (language: 'english' | 'hindi') => {
+  if (language === 'hindi') {
+    return `
+[LANGUAGE RULE — STRICT & MANDATORY]
+- YOU MUST RESPOND EXCLUSIVELY IN HINDI (Devanagari script).
+- Use simple, conversational Hindi — like a smart friend (not formal Bookish Hindi).
+- KEEP ALL CRYPTO TECHNICAL TERMS IN ENGLISH: Bitcoin, ETH, BNB, USDT, leverage, portfolio, bullish, bearish, support, resistance, EMA, longs, shorts.
+- Numbers, prices, and percentages must stay in English/Numerals.
+- Example: "BTC abhi $72,000 par hai. EMA signals bullish hain."
+- If the user asks in English, you STILL respond in Hindi as per their preference.
+`;
+  }
+  return `[LANGUAGE RULE] Respond exclusively in English.`;
+}
+
+/**
  * Builds the complete system prompt for the detected agent.
  */
 export function buildAgentPrompt(
@@ -433,5 +452,8 @@ export function buildAgentPrompt(
   context: AgentContext
 ): string {
   const builder = AGENT_PROMPT_BUILDERS[agentType];
-  return builder(context);
+  const basePrompt = builder(context);
+  const langPrompt = getLanguageInstruction(context.language);
+  
+  return `${basePrompt}\n${langPrompt}`;
 }

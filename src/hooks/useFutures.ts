@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FuturesPosition } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -19,38 +19,46 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
   const [positions, setPositions] = useState<FuturesPosition[]>([]);
   const [balance, setBalance] = useState<number>(INITIAL_BALANCE);
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const initToken = useRef(false);
+
   useEffect(() => {
-    const loadPositions = async () => {
+    const init = async () => {
+      if (initToken.current) return;
+      initToken.current = true;
+      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('futures_positions').select('*').eq('user_id', user.id);
-      if (data) {
-        setPositions(data.map((p: any) => ({
-          id: p.id,
-          coin: p.coin,
-          coinId: p.coin_id,
-          direction: p.direction as any,
-          leverage: p.leverage,
-          entryPrice: parseFloat(p.entry_price),
-          size: parseFloat(p.size),
-          margin: parseFloat(p.margin),
-          liquidationPrice: parseFloat(p.liquidation_price),
-          openedAt: new Date(p.opened_at).getTime(),
-          closedAt: p.closed_at ? new Date(p.closed_at).getTime() : undefined,
-          status: p.status as any,
-          exitPrice: p.exit_price ? parseFloat(p.exit_price) : undefined,
-          pnl: parseFloat(p.pnl || 0),
-          pnlPercent: parseFloat(p.pnl_percent || 0),
-        })));
+      if (user) {
+        setUserId(user.id);
         
-        // Calculate dynamic balance based on closed trades
-        const initial = INITIAL_BALANCE;
-        const pnl = data.filter(d => d.status !== 'open').reduce((acc, d) => acc + parseFloat(d.pnl || 0), 0);
-        const openMargin = data.filter(d => d.status === 'open').reduce((acc, d) => acc + parseFloat(d.margin), 0);
-        setBalance(initial + pnl - openMargin);
+        const { data } = await supabase.from('futures_positions').select('*').eq('user_id', user.id);
+        if (data) {
+          setPositions(data.map((p: any) => ({
+            id: p.id,
+            coin: p.coin,
+            coinId: p.coin_id,
+            direction: p.direction as any,
+            leverage: p.leverage,
+            entryPrice: parseFloat(p.entry_price),
+            size: parseFloat(p.size),
+            margin: parseFloat(p.margin),
+            liquidationPrice: parseFloat(p.liquidation_price),
+            openedAt: new Date(p.opened_at).getTime(),
+            closedAt: p.closed_at ? new Date(p.closed_at).getTime() : undefined,
+            status: p.status as any,
+            exitPrice: p.exit_price ? parseFloat(p.exit_price) : undefined,
+            pnl: parseFloat(p.pnl || 0),
+            pnlPercent: parseFloat(p.pnl_percent || 0),
+          })));
+          
+          const initial = INITIAL_BALANCE;
+          const pnl = data.filter(d => d.status !== 'open').reduce((acc, d) => acc + parseFloat(d.pnl || 0), 0);
+          const openMargin = data.filter(d => d.status === 'open').reduce((acc, d) => acc + parseFloat(d.margin), 0);
+          setBalance(initial + pnl - openMargin);
+        }
       }
     };
-    loadPositions();
+    init();
   }, []);
 
   const calculateLiquidationPrice = (direction: 'long' | 'short', entryPrice: number, leverage: number) => {
@@ -61,7 +69,7 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
   };
 
   const checkExits = useCallback(async (currentPrices: Record<string, { usd: number }>) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    if (!userId) return;
     
     setPositions((prev: FuturesPosition[]) => {
       let updated = false;
@@ -85,18 +93,18 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
             pnl: -position.margin,
             pnlPercent: -100
           };
-          if (user) {
-             supabase.from('futures_positions').update({
-                status: 'liquidated',
-                closed_at: new Date().toISOString(),
-                pnl: pos.pnl,
-                exit_price: pos.exitPrice,
-             }).eq('id', position.id).then();
-          }
+          
+          supabase.from('futures_positions').update({
+            status: 'liquidated',
+            closed_at: new Date().toISOString(),
+            pnl: pos.pnl,
+            exit_price: pos.exitPrice,
+          }).eq('id', position.id).then();
+          
           return pos;
         }
 
-        // SL/TP check (Calculated as ROI %)
+        // SL/TP check
         if (position.stopLoss || position.takeProfit) {
             const priceDiff = position.direction === 'long' 
                 ? (currentPrice - position.entryPrice)
@@ -120,14 +128,14 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
                 pnl: pnl,
                 pnlPercent: roi
               };
-              if (user) {
-                 supabase.from('futures_positions').update({
-                    status: 'closed',
-                    closed_at: new Date().toISOString(),
-                    pnl: pos.pnl,
-                    exit_price: pos.exitPrice,
-                 }).eq('id', position.id).then();
-              }
+              
+              supabase.from('futures_positions').update({
+                status: 'closed',
+                closed_at: new Date().toISOString(),
+                pnl: pos.pnl,
+                exit_price: pos.exitPrice,
+              }).eq('id', position.id).then();
+              
               return pos;
             }
         }
@@ -136,7 +144,7 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
       });
       return updated ? nextPositions : prev;
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (prices) {

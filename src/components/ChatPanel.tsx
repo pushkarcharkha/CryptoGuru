@@ -7,6 +7,8 @@ interface ChatPanelProps {
     isLoading: boolean;
     onSendMessage: (content: string) => void;
     onClearChat: () => void;
+    placeholder?: string;
+    language?: 'english' | 'hindi';
 }
 
 // Simple markdown renderer for bold and links
@@ -93,7 +95,7 @@ const TypewriterMessage = ({ messageId, content }: { messageId: string, content:
     return <>{renderMarkdown(displayed)}</>;
 };
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat, placeholder, language = 'english' }) => {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -163,7 +165,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
         e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
     };
 
-    const QUICK_ACTIONS = [
+    const QUICK_ACTIONS = language === 'hindi' ? [
+        { label: 'BTC विश्लेषण', icon: <BarChart2 size={14} />, msg: 'बीटीसी का चार्ट विश्लेषण करें — वर्तमान ट्रेंड, सपोर्ट/रेसिस्टेंस और ध्यान देने योग्य बातें।' },
+        { label: 'टॉप मूवर्स', icon: <Flame size={14} />, msg: 'आज के टॉप क्रिप्टो मूवर्स कौन से हैं और क्या मुझे उनमें से किसी पर ध्यान देना चाहिए?' },
+        { label: 'जोखिम जांच', icon: <ShieldAlert size={14} />, msg: 'क्रिप्टो मार्केट में इस समय कौन से बड़े जोखिम हैं जिनके बारे में मुझे पता होना चाहिए?' },
+        { label: 'अवसर', icon: <Zap size={14} />, msg: 'क्रिप्टो में इस समय सबसे अच्छा रिस्क/रिवॉर्ड अवसर क्या है?' },
+    ] : [
         { label: 'BTC Analysis', icon: <BarChart2 size={14} />, msg: 'Give me a quick BTC analysis — current trend, support/resistance, and what to watch.' },
         { label: 'Top Movers', icon: <Flame size={14} />, msg: 'What are the top crypto movers today and should I be paying attention to any of them?' },
         { label: 'Risk Check', icon: <ShieldAlert size={14} />, msg: 'What are the biggest risks in the crypto market right now I should know about?' },
@@ -203,7 +210,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                         }}
                     />
                     <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                        Cryptoguru AI — llama-3.3-70b-versatile
+                        Cryptoguru AI — {language === 'hindi' ? 'llama-3.3-70b-सक्षम' : 'llama-3.3-70b-versatile'}
                     </span>
                 </div>
                 <button
@@ -230,7 +237,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                     }}
                 >
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Trash2 size={14} /> Clear
+                        <Trash2 size={14} /> {language === 'hindi' ? 'हटाएं' : 'Clear'}
                     </span>
                 </button>
             </div>
@@ -333,7 +340,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                                 <span />
                             </div>
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                                Analyzing...
+                                {language === 'hindi' ? 'विश्लेषण कर रहा हूँ...' : 'Analyzing...'}
                             </span>
                         </div>
                     </div>
@@ -405,7 +412,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                         value={input}
                         onChange={handleTextareaChange}
                         onKeyDown={handleKeyDown}
-                        placeholder="Ask about crypto, request a chart analysis, or describe a trade..."
+                        placeholder={placeholder || "Ask about crypto..."}
                         rows={1}
                         style={{ flex: 1, minHeight: '44px' }}
                         disabled={isLoading}
@@ -444,7 +451,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
 
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center', opacity: 0.8, fontStyle: 'italic' }}>
-                    We are like a co-pilot, not the pilot.
+                    {language === 'hindi' ? 'हम एक को-पायलट की तरह हैं, पायलट नहीं।' : 'We are like a co-pilot, not the pilot.'}
                 </div>
             </div>
         </div>

@@ -6,6 +6,7 @@ import RightPanel from './components/RightPanel';
 import SignalFeed from './components/SignalFeed';
 import SettingsModal from './components/SettingsModal';
 import ExchangeModal from './components/ExchangeModal';
+import BacktestDashboard from './components/BacktestDashboard';
 import { useGroqChat } from './hooks/useGroqChat';
 import { useWallet, TOKEN_ADDRESSES } from './hooks/useWallet';
 import { useCryptoPrices } from './hooks/useCrypto';
@@ -26,6 +27,41 @@ import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPr
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
+
+const UI_TEXT = {
+  english: {
+    portfolio: 'Portfolio',
+    wallet: 'Wallet & Contacts',
+    watchlist: 'Watchlist',
+    chart: 'Chart Analysis',
+    'news-sentiment': 'News & Sentiment',
+    futures: 'Futures',
+    journal: 'Trade Journal',
+    learn: 'Learn Hub',
+    backtest: 'Backtest Results',
+    settings: 'Settings',
+    connectWallet: 'Connect Wallet',
+    placeholder: 'Ask about crypto, request a chart analysis or describe a trade...',
+    signalFeed: 'Signal Feed',
+    aiAgent: 'AI Agent'
+  },
+  hindi: {
+    portfolio: 'पोर्टफोलियो',
+    wallet: 'वॉलेट और संपर्क',
+    watchlist: 'वॉचलिस्ट',
+    chart: 'चार्ट विश्लेषण',
+    'news-sentiment': 'समाचार और भावना',
+    futures: 'फ्यूचर्स',
+    journal: 'ट्रेड जर्नल',
+    learn: 'लर्न हब',
+    backtest: 'बैकटेस्ट परिणाम',
+    settings: 'सेटिंग्स',
+    connectWallet: 'वॉलेट जोड़ें',
+    placeholder: 'क्रिप्टो के बारे में पूछें, चार्ट विश्लेषण करें, या ट्रेड करें...',
+    signalFeed: 'सिग्नल फीड',
+    aiAgent: 'AI एजेंट'
+  }
+};
 
 let chartAnalysisInProgress = false;
 
@@ -54,7 +90,8 @@ function App() {
     const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
-    const [patternOverlay, setPatternOverlay] = useState<ChartPatternOverlay | null>(null);
+    const [patternOverlay] = useState<ChartPatternOverlay | null>(null);
+    const [language, setLanguageState] = useState<'english' | 'hindi'>(() => (localStorage.getItem('preferredLanguage') as any) || 'english');
 
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
@@ -68,10 +105,27 @@ function App() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setUserData({ id: user.id, email: user.email || '' });
+                
+                // Fetch language from Supabase
+                const { data } = await supabase.from('user_data').select('language').eq('id', user.id).single();
+                if (data?.language) {
+                    setLanguageState(data.language);
+                    localStorage.setItem('preferredLanguage', data.language);
+                }
             }
         };
         fetchUser();
     }, []);
+
+    const setLanguage = async (lang: 'english' | 'hindi') => {
+        localStorage.setItem('preferredLanguage', lang);
+        setLanguageState(lang);
+        if (userData?.id) {
+            await supabase.from('user_data').update({ language: lang }).eq('id', userData!.id);
+        }
+    };
+
+    const t = UI_TEXT[language];
 
     useEffect(() => {
         const timer = setTimeout(() => setShowScanline(false), 1500);
@@ -99,7 +153,7 @@ function App() {
     const { getSwapQuote, approveToken, executeSwap } = usePancakeSwap();
     const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
 
-    const { memory, refreshMemory } = useUserMemory();
+    const { memory } = useUserMemory();
 
     const {
         newsData,
@@ -410,6 +464,15 @@ function App() {
     const { messages, isLoading, sendMessage, addSystemMessage, addUserMessage, clearMessages } = useGroqChat(apiKey, handleAIAction, () => setShowUpgradeModal(true));
 
     useEffect(() => {
+        if (messages.length === 0 && apiKey) {
+            const content = language === 'hindi' 
+              ? 'नमस्ते! मैं आपका crypto co-pilot हूं। अपना wallet connect करें या मुझसे कुछ भी पूछें।'
+              : "Hey, I'm your crypto co-pilot. Connect your wallet or just ask me anything to get started.";
+            addSystemMessage(content);
+        }
+    }, [messages.length, apiKey, language, addSystemMessage]);
+
+    useEffect(() => {
         addSystemMessageRef.current = addSystemMessage;
     }, [addSystemMessage]);
 
@@ -453,12 +516,12 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             }, {
                 balance: futuresBalance,
                 positions: futuresPositions
-            }, 'chart', stats, { hidden: true });
+            }, 'chart', stats, { hidden: true }, memory, language);
             setMobileView('chat');
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
         }
-    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions]);
+    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, memory, language]);
 
     // Handle sidebar feature click → preset message + panel update
     const handleFeatureClick = useCallback(
@@ -486,7 +549,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             if (feature === 'portfolio') {
                 setRightPanelView('portfolio');
                 setManualPanelOverride('portfolio');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
             } else if (feature === 'wallet') {
                 setRightPanelView('contacts');
                 setManualPanelOverride('contacts');
@@ -504,7 +567,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'journal') {
                 setRightPanelView('history');
                 setManualPanelOverride('history');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
             } else if (feature === 'news-sentiment') {
                 setRightPanelView('news-sentiment');
                 setManualPanelOverride('news-sentiment');
@@ -517,13 +580,16 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 setRightPanelView('learn-assistant');
                 setManualPanelOverride('learn-assistant');
                 addSystemMessage("Welcome to the Learn Hub! I'm your AI Tutor. Feel free to ask me anything about the lessons.");
+            } else if (feature === 'backtest') {
+                setActiveTab('agent');
+                // No message needed, just open the dashboard
             } else {
                 setRightPanelView('prices');
                 setManualPanelOverride('prices');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
             }
         },
-        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions]
+        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions, memory, language]
     );
 
     const handleConfirmTransaction = useCallback(async () => {
@@ -807,9 +873,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             }, {
                 balance: futuresBalance,
                 positions: futuresPositions
-            }, activeFeature);
+            }, activeFeature, null, { hidden: false }, memory, language);
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView, memory, language]
     );
 
     const toggleListeningMobile = () => {
@@ -923,7 +989,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         }, {
             balance: futuresBalance,
             positions: futuresPositions
-        }, activeFeature);
+        }, activeFeature, null, { hidden: false }, memory, language);
     };
 
     const handleDynamicSignalAnalyze = (signal: Signal) => {
@@ -947,7 +1013,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             },
             activeFeature,
             null,
-            { allowActions: false }
+            { allowActions: false, hidden: false },
+            memory,
+            language
         );
     };
 
@@ -976,6 +1044,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 alerts={alerts}
                 removeAlert={removeAlert}
                 clearTriggered={clearTriggered}
+                language={language}
+                onLanguageChange={setLanguage}
             />
 
             {/* Main Layout */}
@@ -987,6 +1057,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         onToggle={() => setSidebarOpen((v) => !v)}
                         activeFeature={activeFeature}
                         onFeatureClick={handleFeatureClick}
+                        translations={t}
                     />
                 </div>
 
@@ -1025,13 +1096,17 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                 addSystemMessage(`Navigated to Market Analysis. Try applying the **${lesson.title}** strategy here!`);
                             }}
                         />
+                    ) : activeFeature === 'backtest' ? (
+                        <BacktestDashboard />
                     ) : (
                         activeTab === 'agent' ? (
                             <ChatPanel
                                 messages={messages}
                                 isLoading={isLoading}
                                 onSendMessage={(msg) => { handleSendMessage(msg); setMobileView('chat'); }}
-                                onClearChat={clearMessages}
+                                onClearChat={() => clearMessages(language)}
+                                placeholder={t.placeholder}
+                                language={language}
                             />
                         ) : (
                             <SignalFeed onCopyTrade={handleCopyTrade} onAnalyzeClick={handleDynamicSignalAnalyze} />
@@ -1178,6 +1253,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     apiKey={apiKey}
                     onSave={handleSaveSettings}
                     onClose={() => setSettingsOpen(false)}
+                    language={language}
+                    onLanguageChange={setLanguage}
                 />
             )}
 

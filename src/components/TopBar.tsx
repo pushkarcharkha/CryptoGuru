@@ -17,6 +17,8 @@ interface TopBarProps {
   alerts: PriceAlert[];
   removeAlert: (id: string) => void;
   clearTriggered: () => void;
+  language: 'english' | 'hindi';
+  onLanguageChange: (lang: 'english' | 'hindi') => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -31,6 +33,8 @@ const TopBar: React.FC<TopBarProps> = ({
   alerts,
   removeAlert,
   clearTriggered,
+  language,
+  onLanguageChange,
 }) => {
   const [userEmail, setUserEmail] = useState('');
   const [userPlan, setUserPlan] = useState('free');
@@ -101,13 +105,13 @@ const TopBar: React.FC<TopBarProps> = ({
       {/* Center: Tabs */}
       <div className="topbar-tabs">
         <button id="tab-exchange" onClick={onOpenExchange} className="topbar-tab-btn">
-          <ArrowRightLeft size={16} /> <span className="topbar-tab-label">Exchange</span>
+          <ArrowRightLeft size={16} /> <span className="topbar-tab-label">{language === 'hindi' ? 'एक्सचेंज' : 'Exchange'}</span>
         </button>
         <button id="tab-agent" onClick={() => onTabChange('agent')} className={`topbar-tab-btn ${activeTab === 'agent' ? 'active' : ''}`}>
-          <Bot size={16} /> <span className="topbar-tab-label">AI Agent</span>
+          <Bot size={16} /> <span className="topbar-tab-label">{language === 'hindi' ? 'AI एजेंट' : 'AI Agent'}</span>
         </button>
         <button id="tab-signals" onClick={() => onTabChange('signals')} className={`topbar-tab-btn ${activeTab === 'signals' ? 'active' : ''}`}>
-          <Radio size={16} /> <span className="topbar-tab-label">Signals</span>
+          <Radio size={16} /> <span className="topbar-tab-label">{language === 'hindi' ? 'सिग्नल फीड' : 'Signals'}</span>
         </button>
       </div>
 
@@ -212,8 +216,52 @@ const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {userPlan === 'free' && (
-          <button onClick={onUpgrade} className="topbar-upgrade-btn">UPGRADE</button>
+          <button onClick={onUpgrade} className="topbar-upgrade-btn">{language === 'hindi' ? 'अपग्रेड करें' : 'UPGRADE'}</button>
         )}
+        
+        {/* Language Toggle Pill */}
+        <div style={{
+          display: 'flex',
+          background: 'rgba(0,0,0,0.3)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '20px',
+          padding: '2px',
+          gap: '2px',
+          cursor: 'pointer'
+        }}>
+          <button
+            onClick={() => onLanguageChange('english')}
+            style={{
+              padding: '4px 8px',
+              border: 'none',
+              borderRadius: '16px',
+              fontSize: '10px',
+              fontWeight: 800,
+              background: language === 'english' ? 'rgba(0,212,255,0.2)' : 'transparent',
+              color: language === 'english' ? '#00d4ff' : 'var(--text-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => onLanguageChange('hindi')}
+            style={{
+              padding: '4px 8px',
+              border: 'none',
+              borderRadius: '16px',
+              fontSize: '10px',
+              fontWeight: 800,
+              background: language === 'hindi' ? 'rgba(0,255,136,0.2)' : 'transparent',
+              color: language === 'hindi' ? '#00ff88' : 'var(--text-muted)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            HI
+          </button>
+        </div>
         
         <div className="topbar-user-info">
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -223,7 +271,7 @@ const TopBar: React.FC<TopBarProps> = ({
             <span className="topbar-email" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{userEmail.split('@')[0]}</span>
           </div>
           <button onClick={handleSignOut} style={{ background: 'transparent', border: 'none', padding: '0', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <LogOut size={10} /> Sign Out
+            <LogOut size={10} /> {language === 'hindi' ? 'लॉग आउट' : 'Sign Out'}
           </button>
         </div>
 
@@ -235,8 +283,8 @@ const TopBar: React.FC<TopBarProps> = ({
           </button>
         ) : (
           <button className="wallet-btn" onClick={onConnectWallet}>
-            <span className="topbar-wallet-full">CONNECT WALLET</span>
-            <span className="topbar-wallet-short">CONNECT</span>
+            <span className="topbar-wallet-full">{language === 'hindi' ? 'वॉलेट जोड़ें' : 'CONNECT WALLET'}</span>
+            <span className="topbar-wallet-short">{language === 'hindi' ? 'जोड़ें' : 'CONNECT'}</span>
           </button>
         )}
       </div>
