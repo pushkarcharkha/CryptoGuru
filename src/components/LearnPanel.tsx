@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, CheckCircle2, Play, Book, Target, ShieldCheck, TrendingUp, Presentation, Lightbulb, ListChecks } from 'lucide-react';
-import type { AcademyLesson, AcademyModule, UserProgress } from '../types';
+import { ChevronRight, ChevronDown, CheckCircle2, Play, Book, ShieldCheck, Presentation, Lightbulb, ListChecks } from 'lucide-react';
+import type { AcademyLesson, UserProgress } from '../types';
 import { ACADEMY_CURRICULUM } from '../data/academyCurriculum';
 import { LearnSimulator } from './LearnSimulator';
 
 interface LearnPanelProps {
-    onOpenAssistant: (lesson: any) => void;
-    onTryOnMarket: (lesson: any) => void;
+    onOpenAssistant: (lesson: AcademyLesson) => void;
+    onTryOnMarket: (lesson: AcademyLesson) => void;
 }
 
 const INITIAL_PROGRESS: UserProgress = {
@@ -169,7 +169,7 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
                                     <Lightbulb size={18} color="#ffd700" /> Educational Goals
                                 </div>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {activeLesson.learningGoals.map((goal, i) => (
+                                    {activeLesson.learningGoals.map((goal: string, i: number) => (
                                         <li key={i} style={{ fontSize: '14px', color: '#cbd5e1', display: 'flex', gap: '8px' }}>
                                             <div style={{ marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', background: '#8b5cf6', flexShrink: 0 }} />
                                             {goal}

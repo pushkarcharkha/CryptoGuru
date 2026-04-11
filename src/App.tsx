@@ -26,6 +26,7 @@ import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPr
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
+import { useStrategyMonitor } from './hooks/useStrategyMonitor';
 
 let chartAnalysisInProgress = false;
 
@@ -54,7 +55,7 @@ function App() {
     const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
-    const [patternOverlay, setPatternOverlay] = useState<ChartPatternOverlay | null>(null);
+    const [patternOverlay] = useState<ChartPatternOverlay | null>(null);
 
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
@@ -99,7 +100,7 @@ function App() {
     const { getSwapQuote, approveToken, executeSwap } = usePancakeSwap();
     const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
 
-    const { memory, refreshMemory } = useUserMemory();
+    const { memory } = useUserMemory();
 
     const {
         newsData,
@@ -113,7 +114,10 @@ function App() {
 
     const futuresPricesMap = prices ? Object.fromEntries(prices.map((p: any) => [p.id, { usd: p.price }])) : null;
     const { positions: futuresPositions, balance: futuresBalance, openPosition, closePosition, getLivePnL } = useFutures(futuresPricesMap);
-    const { alerts, addAlert, removeAlert, markAsTriggered, clearTriggered } = useAlerts();
+    const { alerts, addAlert, addStrategyAlert, removeAlert, markAsTriggered, clearTriggered } = useAlerts();
+
+    // Strategy Monitoring Engine
+    useStrategyMonitor(addSystemMessageProxy, addStrategyAlert);
 
     // Helper for auto-switching panels that respects manual overrides
     const setPanelSafe = useCallback((panel: RightPanelView) => {
@@ -256,11 +260,11 @@ function App() {
                     const response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=30`);
                     if (!response.ok) throw new Error('Failed to fetch chart data');
                     const ohlcv = await response.json();
-                    
+
                     const candles = ohlcv.map((d: any) => ({ low: d[3], high: d[2], close: d[4] }));
                     const support = Math.min(...candles.slice(-20).map((c: any) => c.low));
                     const resistance = Math.max(...candles.slice(-20).map((c: any) => c.high));
-                    
+
                     const calcEma = (data: number[], period: number) => {
                         const k = 2 / (period + 1);
                         const ema = [data[0]];
@@ -308,7 +312,7 @@ function App() {
     
     Be direct and specific. No generic advice.
   `;
-                    
+
                     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -319,7 +323,7 @@ function App() {
                             max_tokens: 300
                         })
                     });
-                    
+
                     if (groqRes.ok) {
                         const aiData = await groqRes.json();
                         addSystemMessageProxy(aiData.choices[0].message.content);
@@ -374,7 +378,7 @@ function App() {
     const handleConfirmFutures = async (sl?: any, tp?: any) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
-        
+
         // Ensure arguments are numbers, not React Events
         const finalSl = typeof sl === 'number' ? sl : undefined;
         const finalTp = typeof tp === 'number' ? tp : undefined;
@@ -505,6 +509,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 setRightPanelView('history');
                 setManualPanelOverride('history');
                 sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+            } else if (feature === 'strategies') {
+                setRightPanelView('strategies');
+                setManualPanelOverride('strategies');
             } else if (feature === 'news-sentiment') {
                 setRightPanelView('news-sentiment');
                 setManualPanelOverride('news-sentiment');
@@ -726,21 +733,21 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             // --- Alert Detection ---
             const alertRegex = /(?:notify|alert|tell) me (?:when|if) ([a-zA-Z]+) (?:crosses|hits|is|goes|above|below|over|under)\s*([<>]?\s*[\d,.]+)/i;
             const alertMatch = content.match(alertRegex);
-            
+
             if (alertMatch) {
                 const coinStr = alertMatch[1].toLowerCase();
                 const priceStr = alertMatch[2].replace(/[$,]/g, '');
                 const price = parseFloat(priceStr);
-                
+
                 const coinObj = allCoins.find(c => c.symbol.toLowerCase() === coinStr || c.name.toLowerCase() === coinStr);
-                
+
                 if (coinObj && !isNaN(price)) {
                     addUserMessage(content);
-                    
+
                     // Sync with live price for perfect condition mapping
                     const livePrice = prices?.find(p => p.id === coinObj.id)?.price || coinObj.current_price;
                     const condition = price > livePrice ? 'above' : 'below';
-                    
+
                     addAlert(coinObj.id, coinObj.symbol, price, condition);
                     addSystemMessage(`Acknowledged. I've set a price alert for **${coinObj.symbol.toUpperCase()}** ${condition} **$${price.toLocaleString()}**.`);
                     return;
@@ -866,7 +873,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             if (triggered) {
                 markAsTriggered(alert.id);
                 addSystemMessageProxy(`🔔 **ALERT TRIGGERED:** ${alert.symbol.toUpperCase()} has reached **$${currentPrice.toLocaleString()}** (Target: $${alert.targetPrice.toLocaleString()})`);
-                
+
                 // Also try native notification
                 if (Notification.permission === 'granted') {
                     new Notification('CryptoGuru Price Alert', {
@@ -993,14 +1000,14 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                     {activeFeature === 'learn' ? (
-                        <LearnPanel 
+                        <LearnPanel
                             onOpenAssistant={(lesson: AcademyLesson) => {
                                 setRightPanelView('learn-assistant');
                                 // Hidden instruction to AI to contextualize as a teacher for this lesson
                                 const contextMsg = `The user is now studying: ${lesson.title} (${lesson.level}). 
                                 Summary of lesson: ${lesson.explanation.substring(0, 100)}...
                                 Act as a teacher. If the user asks questions, explain clearly and use analogies.`;
-                                
+
                                 sendMessage(contextMsg, {
                                     address: wallet.address,
                                     holdings: wallet.holdings,
@@ -1014,7 +1021,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                     balance: futuresBalance,
                                     positions: futuresPositions
                                 }, 'learn', null, { hidden: true });
-                            }} 
+                            }}
                             onTryOnMarket={(lesson: AcademyLesson) => {
                                 setActiveFeature('chart');
                                 setRightPanelView('coin-chart');
@@ -1041,96 +1048,96 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
                 {/* Right Panel */}
                 <div className="app-right-panel">
-                <RightPanel
-                    view={manualPanelOverride || rightPanelView}
-                    prices={prices}
-                    pricesLoading={pricesLoading}
-                    wallet={wallet}
-                    transactionPreview={transactionPreview}
-                    contacts={contacts}
-                    onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
-                    onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
-                    onConfirmTransactionClick={handleConfirmTransaction}
-                    onConfirmSwapClick={handleConfirmSwap}
-                    swapPreview={swapPreview}
-                    history={history}
-                    onSwitchNetwork={switchNetwork}
-                    allCoins={allCoins}
-                    watchlistCoins={watchlistCoins}
-                    onToggleWatchlist={toggleWatchlist}
-                    isInWatchlist={isInWatchlist}
-                    watchlistLoading={watchlistLoading}
-                    watchlistLastUpdated={watchlistLastUpdated}
-                    onCoinClick={(coin) => {
-                        const currentView = manualPanelOverride || rightPanelView;
-                        if (currentView === 'coin-chart') {
-                            setActiveCoin(coin);
-                            setChartShouldAnalyze(false);
-                        } else {
-                            setWatchlistCoin(coin);
-                        }
-                    }}
-                    activeCoin={activeCoin}
-                    chartShouldAnalyze={chartShouldAnalyze}
-                    onAnalysisComplete={handleAnalysisComplete}
-                    newsData={newsData}
-                    fearGreedData={fearGreedData}
-                    newsLoading={newsLoading}
-                    newsError={newsError}
-                    newsLastUpdated={newsLastUpdated}
-                    futuresBalance={futuresBalance}
-                    futuresPositions={futuresPositions}
-                    onCloseFuturesPosition={handleCloseFuturesPosition}
-                    futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
-                    pendingFuturesPosition={pendingFuturesPosition}
-                    onConfirmFutures={handleConfirmFutures}
-                    onDeclineFutures={handleDeclineFutures}
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    isLoading={isLoading}
-                    memory={memory}
-                    patternOverlay={patternOverlay}
-                />
-                
-                {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
-                <div className="mobile-quick-chat-container" style={{ gap: '8px', alignItems: 'center', padding: '10px 16px' }}>
-                    <div style={{ position: 'relative', flex: 1 }}>
-                        <input 
-                            type="text" 
-                            placeholder="Type a command..."
-                            className="mobile-quick-chat-input"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                    handleSendMessage(e.currentTarget.value.trim());
-                                    e.currentTarget.value = '';
-                                    setMobileView('chat');
-                                }
-                            }}
-                        />
-                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none', opacity: 0.5 }}>
-                            &#10148;
-                        </div>
-                    </div>
-                    
-                    <button
-                        onClick={toggleListeningMobile}
-                        className={isListeningMobile ? 'listening-pulse' : ''}
-                        style={{
-                            height: '42px',
-                            width: '42px',
-                            borderRadius: '50%',
-                            border: isListeningMobile ? '1px solid #ff4466' : '1px solid rgba(255,255,255,0.1)',
-                            background: isListeningMobile ? 'rgba(255,68,102,0.1)' : 'rgba(0,0,0,0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            flexShrink: 0
+                    <RightPanel
+                        view={manualPanelOverride || rightPanelView}
+                        prices={prices}
+                        pricesLoading={pricesLoading}
+                        wallet={wallet}
+                        transactionPreview={transactionPreview}
+                        contacts={contacts}
+                        onContactSendClick={(name) => handleSendMessage(`Send to ${name}`)}
+                        onContactDeleteClick={(name) => handleSendMessage(`Delete contact ${name}`)}
+                        onConfirmTransactionClick={handleConfirmTransaction}
+                        onConfirmSwapClick={handleConfirmSwap}
+                        swapPreview={swapPreview}
+                        history={history}
+                        onSwitchNetwork={switchNetwork}
+                        allCoins={allCoins}
+                        watchlistCoins={watchlistCoins}
+                        onToggleWatchlist={toggleWatchlist}
+                        isInWatchlist={isInWatchlist}
+                        watchlistLoading={watchlistLoading}
+                        watchlistLastUpdated={watchlistLastUpdated}
+                        onCoinClick={(coin) => {
+                            const currentView = manualPanelOverride || rightPanelView;
+                            if (currentView === 'coin-chart') {
+                                setActiveCoin(coin);
+                                setChartShouldAnalyze(false);
+                            } else {
+                                setWatchlistCoin(coin);
+                            }
                         }}
-                    >
-                        {isListeningMobile ? <MicOff size={18} color="#ff4466" /> : <Mic size={18} color="rgba(255,255,255,0.6)" />}
-                    </button>
-                </div>
+                        activeCoin={activeCoin}
+                        chartShouldAnalyze={chartShouldAnalyze}
+                        onAnalysisComplete={handleAnalysisComplete}
+                        newsData={newsData}
+                        fearGreedData={fearGreedData}
+                        newsLoading={newsLoading}
+                        newsError={newsError}
+                        newsLastUpdated={newsLastUpdated}
+                        futuresBalance={futuresBalance}
+                        futuresPositions={futuresPositions}
+                        onCloseFuturesPosition={handleCloseFuturesPosition}
+                        futuresPrices={prices ? Object.fromEntries(prices.filter(p => p.id && SUPPORTED_FUTURES_COINS[p.symbol.toUpperCase()]).map(p => [p.id, { usd: p.price }])) : {}}
+                        pendingFuturesPosition={pendingFuturesPosition}
+                        onConfirmFutures={handleConfirmFutures}
+                        onDeclineFutures={handleDeclineFutures}
+                        messages={messages}
+                        onSendMessage={handleSendMessage}
+                        isLoading={isLoading}
+                        memory={memory}
+                        patternOverlay={patternOverlay}
+                    />
+
+                    {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
+                    <div className="mobile-quick-chat-container" style={{ gap: '8px', alignItems: 'center', padding: '10px 16px' }}>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                            <input
+                                type="text"
+                                placeholder="Type a command..."
+                                className="mobile-quick-chat-input"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                        handleSendMessage(e.currentTarget.value.trim());
+                                        e.currentTarget.value = '';
+                                        setMobileView('chat');
+                                    }
+                                }}
+                            />
+                            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-cyan)', pointerEvents: 'none', opacity: 0.5 }}>
+                                &#10148;
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={toggleListeningMobile}
+                            className={isListeningMobile ? 'listening-pulse' : ''}
+                            style={{
+                                height: '42px',
+                                width: '42px',
+                                borderRadius: '50%',
+                                border: isListeningMobile ? '1px solid #ff4466' : '1px solid rgba(255,255,255,0.1)',
+                                background: isListeningMobile ? 'rgba(255,68,102,0.1)' : 'rgba(0,0,0,0.3)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                flexShrink: 0
+                            }}
+                        >
+                            {isListeningMobile ? <MicOff size={18} color="#ff4466" /> : <Mic size={18} color="rgba(255,255,255,0.6)" />}
+                        </button>
+                    </div>
 
                 </div>
             </div>

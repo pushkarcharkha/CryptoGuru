@@ -36,7 +36,8 @@ export type RightPanelView =
     | 'news-sentiment'
     | 'futures'
     | 'futures-confirm'
-    | 'learn-assistant';
+    | 'learn-assistant'
+    | 'strategies';
 
 export interface AppTransaction {
     id: string;
@@ -162,7 +163,8 @@ export type SidebarFeature =
     | 'journal'
     | 'news-sentiment'
     | 'futures'
-    | 'learn';
+    | 'learn'
+    | 'strategies';
 
 export interface AcademyLesson {
     id: string;
@@ -177,7 +179,10 @@ export interface AcademyLesson {
     category: string;
     chartTasks: ChartTask[];
     simulation: SimulationStep;
+    quiz?: QuizQuestion[];
 }
+
+export type SimulatorLesson = SimulationStep;
 
 export interface AcademySubsection {
     id: string;
@@ -225,6 +230,7 @@ export interface QuizQuestion {
     explanation: string;
 }
 
+
 export interface NewsArticle {
     title: string;
     url: string;
@@ -242,10 +248,13 @@ export interface FearGreedData {
 }
 export interface PriceAlert {
     id: string;
-    symbol: string;
     coinId: string;
+    symbol: string;
     targetPrice: number;
     condition: 'above' | 'below';
+    type?: 'price' | 'strategy';
+    patternName?: string;
+    message?: string;
     isTriggered: boolean;
     createdAt: number;
 }
@@ -253,15 +262,39 @@ export interface PriceAlert {
 export interface ChartPatternOverlay {
     name: string;
     points: { time: number; price: number; label?: string }[];
-    lines: { 
-        startPrice: number; 
-        endPrice: number; 
-        startTime: number; 
-        endTime: number; 
-        color?: string; 
+    lines: {
+        startPrice: number;
+        endPrice: number;
+        startTime: number;
+        endTime: number;
+        color?: string;
         type?: 'resistance' | 'support' | 'trend';
         dashed?: boolean;
     }[];
     breakoutZone?: number;
     confidence: 'Low' | 'Medium' | 'High';
+}
+export interface StrategyCondition {
+    id: string;
+    type: 'pattern' | 'indicator' | 'price';
+    target: string; // e.g., 'RSI', 'BTC', 'EMA200', 'Head & Shoulders'
+    operator: '>' | '<' | 'crosses_above' | 'crosses_below' | 'is_forming';
+    value: string | number;
+    timeframe: string;
+}
+
+export interface TradingStrategy {
+    id: string;
+    name: string;
+    coin: string | 'ANY';
+    timeframe: string;
+    logic: 'AND' | 'OR';
+    conditions: StrategyCondition[];
+    investmentAmount: number;
+    description?: string;
+    lastTriggered?: number;
+    lastChecked?: number;
+    status?: 'scanning' | 'triggered' | 'error';
+    isActive: boolean;
+    createdAt: number;
 }
