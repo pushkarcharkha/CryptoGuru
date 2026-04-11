@@ -23,6 +23,8 @@ import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPr
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
+import { DisclaimerModal } from './components/DisclaimerModal';
+import { useUserMemory, updateUserMemory } from './hooks/useUserMemory';
 
 let chartAnalysisInProgress = false;
 
@@ -59,6 +61,9 @@ function App() {
 
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [userData, setUserData] = useState<{ id: string, email: string } | null>(null);
+    const [showDisclaimer, setShowDisclaimer] = useState(() => {
+        return sessionStorage.getItem('disclaimer_accepted') !== 'true';
+    });
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -395,6 +400,8 @@ function App() {
             setRightPanelView('futures');
             setManualPanelOverride('futures');
             addSystemMessageProxy(`${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x opened at $${pos.entryPrice.toLocaleString()}. Liq at $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}. Good luck.`);
+            // ─ Memory: track trade opened (background)
+            updateUserMemory({ type: 'trade_opened', coin: pos.coin, size: pos.size, leverage: pos.leverage });
         } catch (err: any) {
             addSystemMessageProxy(`Failed to open position: ${err.message}`);
         }
@@ -414,10 +421,15 @@ function App() {
             closePosition(id, currentPrice);
             const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
             addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
+            // ─ Memory: track trade closed (background)
+            updateUserMemory({ type: 'trade_closed', coin: pos.coin, pnl, leverage: pos.leverage, direction: pos.direction });
         }
     };
 
     const { messages, isLoading, sendMessage, addSystemMessage, addUserMessage, clearMessages } = useGroqChat(apiKey, handleAIAction, () => setShowUpgradeModal(true));
+
+    // ── User Memory System ──────────────────────────────────────────────────────────
+    const { memory, onMessage: onMemoryMessage } = useUserMemory();
 
     useEffect(() => {
         addSystemMessageRef.current = addSystemMessage;
@@ -503,7 +515,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             if (feature === 'portfolio') {
                 setRightPanelView('portfolio');
                 setManualPanelOverride('portfolio');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
             } else if (feature === 'wallet') {
                 setRightPanelView('contacts');
                 setManualPanelOverride('contacts');
@@ -511,21 +523,17 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             } else if (feature === 'watchlist') {
                 setRightPanelView('watchlist');
                 setManualPanelOverride('watchlist');
-                // DO NOT call sendMessage here
-                // Complete silence — just open the panel
             } else if (feature === 'chart') {
                 setActiveCoin(null);
                 setRightPanelView('coin-chart');
                 setManualPanelOverride('coin-chart');
-                // Silent - Do not sendMessage
             } else if (feature === 'journal') {
                 setRightPanelView('history');
                 setManualPanelOverride('history');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
             } else if (feature === 'news-sentiment') {
                 setRightPanelView('news-sentiment');
                 setManualPanelOverride('news-sentiment');
-                // Silent - Do not sendMessage
             } else if (feature === 'futures') {
                 setRightPanelView('futures');
                 setManualPanelOverride('futures');
@@ -533,10 +541,29 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             } else {
                 setRightPanelView('prices');
                 setManualPanelOverride('prices');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
             }
         },
-        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, setRightPanelView, setManualPanelOverride, setActiveFeature, setActiveTab, setActiveCoin]
+        [
+            sendMessage,
+            addSystemMessage,
+            wallet.address,
+            wallet.holdings,
+            contacts,
+            history,
+            watchlistIds,
+            allCoins,
+            fearGreedData,
+            newsData,
+            futuresBalance,
+            futuresPositions,
+            setRightPanelView,
+            setManualPanelOverride,
+            setActiveFeature,
+            setActiveTab,
+            setActiveCoin,
+            memory
+        ]
     );
 
     const handleConfirmTransaction = useCallback(async () => {
@@ -821,9 +848,39 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             }, {
                 balance: futuresBalance,
                 positions: futuresPositions
-            }, activeFeature);
+            }, activeFeature, null, undefined, memory);
+            // ─ Memory: count message, recalculate risk every 10
+            onMemoryMessage();
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView, setMobileView, setRightPanelView, setManualPanelOverride, setActiveCoin, setChartShouldAnalyze, setActivePattern, prices]
+        [
+            sendMessage,
+            addUserMessage,
+            addContact,
+            removeContact,
+            contacts,
+            allCoins,
+            wallet.address,
+            wallet.holdings,
+            history,
+            watchlistIds,
+            fearGreedData,
+            newsData,
+            futuresBalance,
+            futuresPositions,
+            activeFeature,
+            addAlert,
+            addSystemMessage,
+            mobileView,
+            setMobileView,
+            setRightPanelView,
+            setManualPanelOverride,
+            setActiveCoin,
+            setChartShouldAnalyze,
+            setActivePattern,
+            prices,
+            memory,
+            onMemoryMessage
+        ]
     );
 
     const toggleListeningMobile = () => {
@@ -1163,6 +1220,13 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                     userId={userData?.id}
                     userEmail={userData?.email}
                 />
+            )}
+
+            {showDisclaimer && (
+                <DisclaimerModal onAccept={() => {
+                    sessionStorage.setItem('disclaimer_accepted', 'true');
+                    setShowDisclaimer(false);
+                }} />
             )}
         </div>
     );
