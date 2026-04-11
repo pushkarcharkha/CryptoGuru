@@ -60,7 +60,7 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
             </div>
           </div>
           <div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Margin Used</div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Invested Capital</div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>
               <AnimatedNumber value={marginUsed} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
             </div>
@@ -140,6 +140,9 @@ const FuturesPanel: React.FC<FuturesPanelProps> = ({
                     </div>
                     <div>
                       Liq Price: <span style={{ color: pos.direction === 'long' ? '#ff3366' : '#10ff88' }}>${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div>
+                      Invested: <span style={{ color: '#e2e8f0' }}>${pos.margin.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </div>
                     <div>
                       PnL: <span style={{ color: pnl >= 0 ? '#10ff88' : '#ff3366' }}>{pnl >= 0 ? '+' : '-'}<AnimatedNumber value={Math.abs(pnl)} format={(n) => `$${n.toFixed(2)}`} /></span>

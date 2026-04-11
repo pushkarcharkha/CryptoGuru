@@ -581,7 +581,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             } else if (feature === 'strategies') {
                 setRightPanelView('strategies');
                 setManualPanelOverride('strategies');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, { hidden: false }, memory, language);
+                // Silent - Do not sendMessage
             } else if (feature === 'news-sentiment') {
                 setRightPanelView('news-sentiment');
                 setManualPanelOverride('news-sentiment');
@@ -685,16 +685,23 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
         } catch (err: any) {
             console.error('Transaction Error:', err);
-            addSystemMessage(`Error: ${err.message || 'Transaction failed'}`);
+            
+            const isRejected = err.code === 'ACTION_REJECTED' || (err.message && err.message.toLowerCase().includes('reject')) || err.info?.error?.code === 4001;
 
-            if (txHash && preview) {
+            if (isRejected) {
+                addSystemMessage(`Transaction rejected by user.`);
+            } else {
+                addSystemMessage(`Error: ${err.message || 'Transaction failed'}`);
+            }
+
+            if (preview) {
                 saveTransaction({
                     type: 'send',
                     fromToken: preview.coin,
                     fromAmount: preview.amount,
                     toAddress: preview.address,
                     contactName: preview.recipientName,
-                    status: 'failed',
+                    status: isRejected ? 'rejected' : 'failed',
                     hash: txHash,
                     network: wallet.networkName || 'Ethereum Mainnet'
                 });
@@ -764,7 +771,14 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
         } catch (err: any) {
             console.error('Swap Error:', err);
-            addSystemMessageProxy(`Swap failed: ${err.message}`);
+            
+            const isRejected = err.code === 'ACTION_REJECTED' || (err.message && err.message.toLowerCase().includes('reject')) || err.info?.error?.code === 4001;
+
+            if (isRejected) {
+                addSystemMessageProxy(`Swap rejected by user.`);
+            } else {
+                addSystemMessageProxy(`Swap failed: ${err.message}`);
+            }
 
             saveTransaction({
                 type: 'swap',
@@ -772,7 +786,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 fromAmount: swapPreview?.fromAmount || '0',
                 toToken: swapPreview?.toToken || '?',
                 toAmount: swapPreview?.toAmount || '0',
-                status: 'failed',
+                status: isRejected ? 'rejected' : 'failed',
                 hash: '',
                 network: 'BNB Smart Chain'
             });
@@ -1083,6 +1097,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     {activeFeature === 'learn' ? (
                         <LearnPanel 
                             onOpenAssistant={(lesson: AcademyLesson) => {
+                                clearMessages(language);
                                 setRightPanelView('learn-assistant');
                                 // Hidden instruction to AI to contextualize as a teacher for this lesson
                                 const contextMsg = `[ACADEMY_CONTEXT]

@@ -22,6 +22,16 @@ const BacktestDashboard: React.FC = () => {
     const equityChartRef = useRef<HTMLDivElement>(null);
     const chartInstances = useRef<{ main: any, equity: any }>({ main: null, equity: null });
 
+    const [btcPrice, setBtcPrice] = useState(90000); // Default to around current price
+    useEffect(() => {
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+            .then(res => res.json())
+            .then(data => {
+                if (data?.bitcoin?.usd) setBtcPrice(data.bitcoin.usd);
+            })
+            .catch(() => {});
+    }, []);
+
     const runBacktest = () => {
         setIsAnalyzing(true);
         setProgress(0);
@@ -88,7 +98,7 @@ const BacktestDashboard: React.FC = () => {
         const priceData: any[] = [];
         const equityData: any[] = [];
         
-        let lastPrice = 71500 + (Math.random() * 2000);
+        let lastPrice = btcPrice + (Math.random() * 2000);
         let currentEquity = investment;
         const now = Math.floor(Date.now() / 1000);
         const totalPoints = duration + 20;
@@ -167,7 +177,7 @@ const BacktestDashboard: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800 }}>PERIOD</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        {[30, 60, 90].map(d => (
+                        {[30, 90, 180, 365].map(d => (
                             <button key={d} onClick={() => setDuration(d)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: duration === d ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)', background: duration === d ? 'rgba(0, 212, 255, 0.1)' : 'transparent', color: 'white', fontSize: '12px', fontWeight: 700 }}>{d}D</button>
                         ))}
                     </div>
@@ -192,8 +202,8 @@ const BacktestDashboard: React.FC = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700 }}>BTC/USDT SIGNAL CHART (NO INDICATORS)</div>
                             <div style={{ display: 'flex', gap: '16px' }}>
-                                <LegendItem color="#00ff88" label="Buy Signal" isDot />
-                                <LegendItem color="#ff3366" label="Sell Signal" isDot />
+                                <LegendItem color="#00ff88" label="Buy Signal" type="up" />
+                                <LegendItem color="#ff3366" label="Sell Signal" type="down" />
                             </div>
                         </div>
                         <div ref={mainChartRef} style={{ width: '100%', height: '280px' }} />
@@ -209,9 +219,15 @@ const BacktestDashboard: React.FC = () => {
     );
 };
 
-const LegendItem = ({ color, label, isDot }: any) => (
+const LegendItem = ({ color, label, type }: any) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div style={{ width: isDot ? '6px' : '14px', height: '6px', background: color, borderRadius: isDot ? '50%' : '1px' }} />
+        {type === 'up' ? (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill={color}><path d="M5 0 L10 10 L0 10 Z" /></svg>
+        ) : type === 'down' ? (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill={color}><path d="M0 0 L10 0 L5 10 Z" /></svg>
+        ) : (
+            <div style={{ width: '6px', height: '6px', background: color, borderRadius: '50%' }} />
+        )}
         <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700 }}>{label.toUpperCase()}</span>
     </div>
 );

@@ -384,7 +384,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    overflowY: view === 'coin-chart' ? 'hidden' : 'auto',
+                    overflowY: 'auto',
                     WebkitOverflowScrolling: 'touch',
                     scrollBehavior: 'smooth',
                     overscrollBehaviorY: 'contain',
@@ -822,7 +822,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                My Portfolio
+                                My Watchlist
                             </button>
                             <button
                                 onClick={() => setWatchlistTab('all')}

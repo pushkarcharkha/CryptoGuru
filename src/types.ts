@@ -50,7 +50,7 @@ export interface AppTransaction {
     toAddress?: string;
     contactName?: string;
     timestamp: number;
-    status: 'pending' | 'success' | 'failed';
+    status: 'pending' | 'success' | 'failed' | 'rejected';
     hash: string;
     network: string;
 }
