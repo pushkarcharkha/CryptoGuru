@@ -6,7 +6,7 @@ import {
     Pie,
     Cell,
 } from 'recharts';
-import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, SwapPreview, AppTransaction, CoinGeckoCoin, NewsArticle, FearGreedData, FuturesPosition, Message, AcademyLesson } from '../types';
+import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, SwapPreview, AppTransaction, CoinGeckoCoin, NewsArticle, FearGreedData, FuturesPosition, Message } from '../types';
 import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
@@ -14,7 +14,7 @@ import { AnimatedNumber } from './AnimatedNumber';
 import { useStrategies } from '../hooks/useStrategies';
 import { StrategyBuilderModal } from './StrategyBuilderModal';
 import { StrategyCard } from './StrategyCard';
-import { Zap } from 'lucide-react';
+import { Zap, Plus } from 'lucide-react';
 import {
     Send as SendIcon,
     AlertTriangle,
@@ -22,7 +22,7 @@ import {
     Trash2,
     Search,
     Book,
-    Plus,
+
     CheckCircle,
     XCircle,
     Clock,
@@ -962,6 +962,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         
                         <MemoryCard memory={memory} />
 
+                        
 
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
                             <input
@@ -1113,10 +1114,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 })}
                             </div>
                         )}
-
                     </div>
                 )}
-
                 {/* ===== STRATEGIES VIEW (Dedicated) ===== */}
                 {view === 'strategies' && (
                     <div className="panel-content fade-in">
@@ -1198,8 +1197,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         />
                     </div>
                 )}
-
-
                 {/* ===== FUTURES VIEW ===== */}
                 {view === 'futures' && (
                     <FuturesPanel
@@ -1241,13 +1238,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
                             flexDirection: 'column', 
                             gap: '12px' 
                         }}>
-                            {messages.filter(m => !m.content.startsWith('The user is now studying:')).length === 0 ? (
+                            {messages.filter(m => !m.content.includes('[ACADEMY_CONTEXT]') && m.content !== 'MENTOR_ACTIVATED' && !m.content.startsWith('The user is now studying:')).length === 0 ? (
                                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', paddingTop: '40px' }}>
                                     I'm your dedicated crypto tutor. Ask me about the current lesson, or for examples and simpler explanations!
                                 </div>
                             ) : (
                                 messages
-                                    .filter(m => !m.content.startsWith('The user is now studying:'))
+                                    .filter(m => !m.content.includes('[ACADEMY_CONTEXT]') && m.content !== 'MENTOR_ACTIVATED' && !m.content.startsWith('The user is now studying:'))
                                     .map((m, i) => (
                                     <div key={i} style={{
                                         alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
