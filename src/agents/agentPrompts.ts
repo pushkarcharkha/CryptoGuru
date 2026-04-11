@@ -67,6 +67,7 @@ export interface AgentContext {
   sentimentBlock: string;
   newsBlock: string;
   userContextBlock: string;
+  memoryBlock: string;  // ← user behavior profile for personalization
 
   // Raw data for agent-specific access
   walletAddress?: string | null;
@@ -95,7 +96,9 @@ export interface AgentContext {
 // ── Agent prompt builders ───────────────────────────────────────────────────
 
 function buildBaseContext(ctx: AgentContext): string {
-  return `[LIVE DATA]
+  return `${ctx.memoryBlock}
+
+[LIVE DATA]
 ${ctx.pricesBlock}
 ${ctx.sentimentBlock}
 `;

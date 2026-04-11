@@ -63,6 +63,7 @@ interface RightPanelProps {
     onDeclineFutures?: () => void;
     chartShouldAnalyze?: boolean;
     onAnalysisComplete?: (stats: any) => void;
+    memory?: any;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -166,6 +167,73 @@ const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => {
   );
 };
 
+const MemoryCard = ({ memory }: { memory: any }) => {
+  if (!memory || memory.risk_profile === 'unknown') return null;
+  
+  const Stat = ({ label, value }: { label: string, value: string }) => (
+    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', flex: 1, minWidth: '100px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{value}</div>
+    </div>
+  );
+
+  return (
+    <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', borderLeft: '3px solid #00d4ff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+        <Activity size={16} color="#00d4ff" />
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#e2e8f0' }}>Your Trading Profile</h3>
+      </div>
+      
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+        <Stat label="Risk Profile" value={memory.risk_profile} />
+        <Stat label="Win Rate" value={`${memory.win_rate?.toFixed(1) || 0}%`} />
+        <Stat label="Avg Trade Size" value={`$${memory.avg_trade_size?.toFixed(0) || 0}`} />
+        <Stat label="Avg Leverage" value={`${memory.leverage_preference?.toFixed(0) || 0}x`} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+        {memory.winning_patterns?.length > 0 && (
+          <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle size={12} /> Winning Patterns
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {memory.winning_patterns.map((p: string) => <div key={p} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {p}</div>)}
+            </div>
+          </div>
+        )}
+
+        {memory.common_mistakes?.length > 0 && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertTriangle size={12} /> Watch Out For
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {memory.common_mistakes.map((m: string) => <div key={m} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {m}</div>)}
+            </div>
+          </div>
+        )}
+
+        {memory.emotional_triggers?.length > 0 && (
+          <div style={{ background: 'rgba(139, 92, 246, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Activity size={12} /> Emotional Triggers
+            </h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {memory.emotional_triggers.map((t: string) => (
+                <span key={t} style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', color: '#d8b4fe' }}>
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
 
 
 const RightPanel: React.FC<RightPanelProps> = ({
@@ -203,6 +271,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     onDeclineFutures,
     chartShouldAnalyze,
     onAnalysisComplete,
+    memory,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -873,6 +942,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 Export CSV
                             </button>
                         </div>
+                        
+                        <MemoryCard memory={memory} />
 
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
                             <input
