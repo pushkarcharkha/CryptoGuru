@@ -243,7 +243,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
           const format = (id: string, name: string) => d[id] ? `${name}: $${d[id].usd} (${d[id].usd_24h_change?.toFixed(2)}%)` : `${name}: N/A`;
           pricesBlock = `LIVE MARKET PRICES:\n${format('bitcoin', 'BTC')}\n${format('ethereum', 'ETH')}\n${format('binancecoin', 'BNB')}\n${format('solana', 'SOL')}\n${format('ripple', 'XRP')}\n${format('cardano', 'ADA')}\n${format('chainlink', 'LINK')}`;
         }
-      } catch (err) { console.error(err); }
+      } catch (err) { console.warn('[useGroqChat] Warning: Failed to fetch live prices for context (network/CORS). Proceeding without live data.'); }
 
       // ── 3. Build sentiment context ────────────────────────────────────
       let sentimentBlock = 'SENTIMENT: N/A';
@@ -330,7 +330,12 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
           })
         });
 
-        if (!res.ok) throw new Error('API Error');
+        if (!res.ok) {
+          if (res.status === 429) {
+            throw new Error('AI rate limit exceeded (Too Many Requests). Please wait a few seconds before trying again.');
+          }
+          throw new Error(`API Error (${res.status})`);
+        }
         const data = await res.json();
         let aiContent = data.choices[0].message.content;
 
