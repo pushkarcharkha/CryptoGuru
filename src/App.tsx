@@ -19,12 +19,13 @@ import { usePancakeSwap, BNB_TOKENS } from './hooks/usePancakeSwap';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import { Mic, MicOff } from 'lucide-react';
-import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition, ChartPatternOverlay } from './types';
+import LearnPanel from './components/LearnPanel';
+import { useUserMemory } from './hooks/useUserMemory';
+import type { AcademyLesson, ChartPatternOverlay } from './types';
+import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
-import { DisclaimerModal } from './components/DisclaimerModal';
-import { useUserMemory, updateUserMemory } from './hooks/useUserMemory';
 
 let chartAnalysisInProgress = false;
 
@@ -53,7 +54,7 @@ function App() {
     const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
-    const [activePattern, setActivePattern] = useState<ChartPatternOverlay | null>(null);
+    const [patternOverlay, setPatternOverlay] = useState<ChartPatternOverlay | null>(null);
 
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
@@ -61,9 +62,6 @@ function App() {
 
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [userData, setUserData] = useState<{ id: string, email: string } | null>(null);
-    const [showDisclaimer, setShowDisclaimer] = useState(() => {
-        return sessionStorage.getItem('disclaimer_accepted') !== 'true';
-    });
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -100,6 +98,8 @@ function App() {
     const { history, saveTransaction } = useTransactionHistory();
     const { getSwapQuote, approveToken, executeSwap } = usePancakeSwap();
     const { allCoins, watchlistCoins, watchlistIds, loading: watchlistLoading, lastUpdated: watchlistLastUpdated, toggleWatchlist, isInWatchlist } = useWatchlist();
+
+    const { memory, refreshMemory } = useUserMemory();
 
     const {
         newsData,
@@ -368,21 +368,6 @@ function App() {
                     addSystemMessageProxy(`Alert set! I'll notify you when **${coinObj.symbol.toUpperCase()}** goes ${condition} **$${parseFloat(price).toLocaleString()}**.`);
                 }
             }
-        } else if (action === 'MARK_PATTERN') {
-            try {
-                const { name, lines, points, breakout, confidence } = params;
-                setActivePattern({
-                    name,
-                    lines: JSON.parse(lines || '[]'),
-                    points: JSON.parse(points || '[]'),
-                    breakoutZone: breakout ? parseFloat(breakout) : undefined,
-                    confidence: (confidence as any) || 'Medium'
-                });
-                setRightPanelView('coin-chart');
-                setMobileView('panel');
-            } catch (err: any) {
-                console.error("Pattern Marking Error:", err);
-            }
         }
     }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, apiKey, fearGreedData, newsData]);
 
@@ -400,8 +385,6 @@ function App() {
             setRightPanelView('futures');
             setManualPanelOverride('futures');
             addSystemMessageProxy(`${pos.direction.toUpperCase()} ${pos.coin} ${pos.leverage}x opened at $${pos.entryPrice.toLocaleString()}. Liq at $${pos.liquidationPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}. Good luck.`);
-            // ─ Memory: track trade opened (background)
-            updateUserMemory({ type: 'trade_opened', coin: pos.coin, size: pos.size, leverage: pos.leverage });
         } catch (err: any) {
             addSystemMessageProxy(`Failed to open position: ${err.message}`);
         }
@@ -421,15 +404,10 @@ function App() {
             closePosition(id, currentPrice);
             const { pnl, pnlPercent } = getLivePnL(pos, currentPrice);
             addSystemMessageProxy(`Position Closed: ${pos.coin} ${pos.direction.toUpperCase()} closed at $${currentPrice.toLocaleString()}\nPnL: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent.toFixed(2)}%)`);
-            // ─ Memory: track trade closed (background)
-            updateUserMemory({ type: 'trade_closed', coin: pos.coin, pnl, leverage: pos.leverage, direction: pos.direction });
         }
     };
 
     const { messages, isLoading, sendMessage, addSystemMessage, addUserMessage, clearMessages } = useGroqChat(apiKey, handleAIAction, () => setShowUpgradeModal(true));
-
-    // ── User Memory System ──────────────────────────────────────────────────────────
-    const { memory, onMessage: onMemoryMessage } = useUserMemory();
 
     useEffect(() => {
         addSystemMessageRef.current = addSystemMessage;
@@ -454,19 +432,12 @@ EMA Cross: ${stats.ema20 > stats.ema50 ? 'EMA20 above EMA50 — Bullish' : 'EMA2
 Buy Signals detected: ${stats.buySignals}
 Sell Signals detected: ${stats.sellSignals}
 
-Using ONLY these exact numbers and swing points, identify the most probable chart pattern (e.g., Head & Shoulders, Triangle, Double Top, etc.).
-Structure your response as:
-1. Pattern Identified
-2. Structure found
-3. Implication
-4. Confidence
-5. Trading Setup (Entry, Target, Stop Loss)
+Using ONLY these exact numbers give a professional trading analysis. Include:
+- Where price is relative to support and resistance
+- What the EMA cross means
+- Suggested entry zone, target and stop loss
 - Overall trend direction
-- Risk level
-
-CHART SWING POINTS (Anchor pattern markings to these):
-Highs: ${JSON.stringify(stats.swingHighs)}
-Lows: ${JSON.stringify(stats.swingLows)}`;
+- Risk level`;
 
             // Use the ref because we don't want sendMessage to be a dependency (circular)
             // Actually, we can just call sendMessage from the hook since we have it here
@@ -487,7 +458,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
         }
-    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, setMobileView]);
+    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions]);
 
     // Handle sidebar feature click → preset message + panel update
     const handleFeatureClick = useCallback(
@@ -515,7 +486,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             if (feature === 'portfolio') {
                 setRightPanelView('portfolio');
                 setManualPanelOverride('portfolio');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
             } else if (feature === 'wallet') {
                 setRightPanelView('contacts');
                 setManualPanelOverride('contacts');
@@ -523,47 +494,36 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             } else if (feature === 'watchlist') {
                 setRightPanelView('watchlist');
                 setManualPanelOverride('watchlist');
+                // DO NOT call sendMessage here
+                // Complete silence — just open the panel
             } else if (feature === 'chart') {
                 setActiveCoin(null);
                 setRightPanelView('coin-chart');
                 setManualPanelOverride('coin-chart');
+                // Silent - Do not sendMessage
             } else if (feature === 'journal') {
                 setRightPanelView('history');
                 setManualPanelOverride('history');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
             } else if (feature === 'news-sentiment') {
                 setRightPanelView('news-sentiment');
                 setManualPanelOverride('news-sentiment');
+                // Silent - Do not sendMessage
             } else if (feature === 'futures') {
                 setRightPanelView('futures');
                 setManualPanelOverride('futures');
                 addSystemMessage("You're in paper futures mode. You can open long or short positions with leverage. Try saying 'open a long BTC position with 10x leverage for $100'");
+            } else if (feature === 'learn') {
+                setRightPanelView('learn-assistant');
+                setManualPanelOverride('learn-assistant');
+                addSystemMessage("Welcome to the Learn Hub! I'm your AI Tutor. Feel free to ask me anything about the lessons.");
             } else {
                 setRightPanelView('prices');
                 setManualPanelOverride('prices');
-                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature, null, undefined, memory);
+                sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
             }
         },
-        [
-            sendMessage,
-            addSystemMessage,
-            wallet.address,
-            wallet.holdings,
-            contacts,
-            history,
-            watchlistIds,
-            allCoins,
-            fearGreedData,
-            newsData,
-            futuresBalance,
-            futuresPositions,
-            setRightPanelView,
-            setManualPanelOverride,
-            setActiveFeature,
-            setActiveTab,
-            setActiveCoin,
-            memory
-        ]
+        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions]
     );
 
     const handleConfirmTransaction = useCallback(async () => {
@@ -659,7 +619,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                 });
             }
         }
-    }, [wallet.isConnected, wallet.networkName, transactionPreview, addSystemMessage, addSystemMessageProxy, getExplorerUrl, refreshBalances, saveTransaction, setTransactionPreview]);
+    }, [wallet.isConnected, wallet.networkName, transactionPreview, addSystemMessage, addSystemMessageProxy, getExplorerUrl, refreshBalances, saveTransaction]);
 
     const handleConfirmSwap = useCallback(async () => {
         if (!wallet.isConnected || !window.ethereum || !swapPreview) {
@@ -735,7 +695,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                 network: 'BNB Smart Chain'
             });
         }
-    }, [wallet.isConnected, wallet.address, swapPreview, addSystemMessageProxy, approveToken, getExplorerUrl, refreshBalances, saveTransaction, setSwapPreview, setRightPanelView, executeSwap]);
+    }, [wallet.isConnected, wallet.address, swapPreview, addSystemMessageProxy, approveToken, getExplorerUrl, refreshBalances, saveTransaction]);
 
     const handleSendMessage = useCallback(
         (content: string) => {
@@ -827,7 +787,6 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                 addUserMessage(content);
                 setActiveCoin(detectedCoin);
                 setChartShouldAnalyze(true);
-                setActivePattern(null); // Clear previous pattern
                 setRightPanelView('coin-chart');
                 setManualPanelOverride('coin-chart');
                 setMobileView('panel');
@@ -848,39 +807,9 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
             }, {
                 balance: futuresBalance,
                 positions: futuresPositions
-            }, activeFeature, null, undefined, memory);
-            // ─ Memory: count message, recalculate risk every 10
-            onMemoryMessage();
+            }, activeFeature);
         },
-        [
-            sendMessage,
-            addUserMessage,
-            addContact,
-            removeContact,
-            contacts,
-            allCoins,
-            wallet.address,
-            wallet.holdings,
-            history,
-            watchlistIds,
-            fearGreedData,
-            newsData,
-            futuresBalance,
-            futuresPositions,
-            activeFeature,
-            addAlert,
-            addSystemMessage,
-            mobileView,
-            setMobileView,
-            setRightPanelView,
-            setManualPanelOverride,
-            setActiveCoin,
-            setChartShouldAnalyze,
-            setActivePattern,
-            prices,
-            memory,
-            onMemoryMessage
-        ]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView]
     );
 
     const toggleListeningMobile = () => {
@@ -961,7 +890,7 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
         } else {
             setRightPanelView('portfolio');
         }
-    }, [wallet.isConnected, connectWallet, setRightPanelView]);
+    }, [wallet.isConnected, connectWallet]);
 
     const handleOpenExchange = useCallback(() => {
         setExchangeOpen(true);
@@ -1063,15 +992,50 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
 
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {activeTab === 'agent' ? (
-                        <ChatPanel
-                            messages={messages}
-                            isLoading={isLoading}
-                            onSendMessage={(msg) => { handleSendMessage(msg); setMobileView('chat'); }}
-                            onClearChat={clearMessages}
+                    {activeFeature === 'learn' ? (
+                        <LearnPanel 
+                            onOpenAssistant={(lesson: AcademyLesson) => {
+                                setRightPanelView('learn-assistant');
+                                // Hidden instruction to AI to contextualize as a teacher for this lesson
+                                const contextMsg = `The user is now studying: ${lesson.title} (${lesson.level}). 
+                                Summary of lesson: ${lesson.explanation.substring(0, 100)}...
+                                Act as a teacher. If the user asks questions, explain clearly and use analogies.`;
+                                
+                                sendMessage(contextMsg, {
+                                    address: wallet.address,
+                                    holdings: wallet.holdings,
+                                    contacts,
+                                    history,
+                                    watchlist: watchlistIds
+                                }, {
+                                    fearGreed: fearGreedData,
+                                    news: newsData
+                                }, {
+                                    balance: futuresBalance,
+                                    positions: futuresPositions
+                                }, 'learn', null, { hidden: true });
+                            }} 
+                            onTryOnMarket={(lesson: AcademyLesson) => {
+                                setActiveFeature('chart');
+                                setRightPanelView('coin-chart');
+                                setManualPanelOverride('coin-chart');
+                                // Select Bitcoin by default for practice unless specific coin detectable
+                                const btc = allCoins.find(c => c.symbol === 'btc') || allCoins[0];
+                                if (btc) setActiveCoin(btc);
+                                addSystemMessage(`Navigated to Market Analysis. Try applying the **${lesson.title}** strategy here!`);
+                            }}
                         />
                     ) : (
-                        <SignalFeed onCopyTrade={handleCopyTrade} onAnalyzeClick={handleDynamicSignalAnalyze} />
+                        activeTab === 'agent' ? (
+                            <ChatPanel
+                                messages={messages}
+                                isLoading={isLoading}
+                                onSendMessage={(msg) => { handleSendMessage(msg); setMobileView('chat'); }}
+                                onClearChat={clearMessages}
+                            />
+                        ) : (
+                            <SignalFeed onCopyTrade={handleCopyTrade} onAnalyzeClick={handleDynamicSignalAnalyze} />
+                        )
                     )}
                 </div>
 
@@ -1109,7 +1073,6 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                     activeCoin={activeCoin}
                     chartShouldAnalyze={chartShouldAnalyze}
                     onAnalysisComplete={handleAnalysisComplete}
-                    patternOverlay={activePattern}
                     newsData={newsData}
                     fearGreedData={fearGreedData}
                     newsLoading={newsLoading}
@@ -1122,10 +1085,15 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                     pendingFuturesPosition={pendingFuturesPosition}
                     onConfirmFutures={handleConfirmFutures}
                     onDeclineFutures={handleDeclineFutures}
+                    messages={messages}
+                    onSendMessage={handleSendMessage}
+                    isLoading={isLoading}
+                    memory={memory}
+                    patternOverlay={patternOverlay}
                 />
                 
                 {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}
-                <div className="mobile-quick-chat-container" style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 16px' }}>
+                <div className="mobile-quick-chat-container" style={{ gap: '8px', alignItems: 'center', padding: '10px 16px' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                         <input 
                             type="text" 
@@ -1220,13 +1188,6 @@ Lows: ${JSON.stringify(stats.swingLows)}`;
                     userId={userData?.id}
                     userEmail={userData?.email}
                 />
-            )}
-
-            {showDisclaimer && (
-                <DisclaimerModal onAccept={() => {
-                    sessionStorage.setItem('disclaimer_accepted', 'true');
-                    setShowDisclaimer(false);
-                }} />
             )}
         </div>
     );
