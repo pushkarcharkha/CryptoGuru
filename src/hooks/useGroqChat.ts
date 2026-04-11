@@ -27,14 +27,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
     onActionDetectedRef.current = onActionDetected;
   }, [onActionDetected]);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'init',
-      role: 'assistant',
-      content: "Hey, I'm your crypto co-pilot. 🚀 Markets are moving fast — I've got the latest sentiment and news stats ready for you. Ask me anything!",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastAgent, setLastAgent] = useState<AgentType | null>(null);
 
@@ -74,6 +67,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
         hidden?: boolean;
       },
       userMemory?: UserMemory | null,
+      language: 'english' | 'hindi' = 'english'
     ) => {
       if (!content.trim() || isLoading) return;
 
@@ -314,6 +308,7 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
         futuresBalance: futuresContext?.balance,
         chartAnalysisResults: chartAnalysisResults || null,
         futuresIntent,
+        language,
       };
 
       const systemPrompt = buildAgentPrompt(agent, agentContext) + researchInjection + emotionalInjection;
@@ -370,15 +365,19 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
   );
 
   const addSystemMessage = useCallback((content: string) => {
-    setMessages((prev) => [...prev, { id: `sys-${Date.now()}`, role: 'assistant', content, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { id: `sys-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, role: 'assistant', content, timestamp: new Date() }]);
   }, []);
 
   const addUserMessage = useCallback((content: string) => {
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: 'user', content, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { id: `u-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, role: 'user', content, timestamp: new Date() }]);
   }, []);
 
-  const clearMessages = useCallback(() => {
-    setMessages([{ id: 'reset', role: 'assistant', content: "Chat cleared. Ask me anything!", timestamp: new Date() }]);
+  const clearMessages = useCallback((language: 'english' | 'hindi' = 'english') => {
+    const content = language === 'hindi' 
+      ? 'नमस्ते! मैं आपका crypto co-pilot हूं। अपना wallet connect करें या मुझसे कुछ भी पूछें।'
+      : "Hey, I'm your crypto co-pilot. Connect your wallet or just ask me anything to get started.";
+      
+    setMessages([{ id: `reset-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, role: 'assistant', content, timestamp: new Date() }]);
     setLastAgent(null);
   }, []);
 

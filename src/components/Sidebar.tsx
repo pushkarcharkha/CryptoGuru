@@ -7,6 +7,7 @@ interface SidebarProps {
     onToggle: () => void;
     activeFeature: SidebarFeature | null;
     onFeatureClick: (feature: SidebarFeature, message: string) => void;
+    translations?: any;
 }
 
 const FEATURES: {
@@ -64,14 +65,26 @@ const FEATURES: {
             label: 'Learn Hub',
             message: 'Welcome to the Learn Hub! I am your AI Crypto Teacher. What would you like to learn today?',
         },
+        {
+            id: 'backtest',
+            icon: <Activity size={20} />,
+            label: 'Backtest Results',
+            message: 'Backtest Dashboard: Analyze the historical performance of my signals and strategies.',
+        },
     ];
-
 const Sidebar: React.FC<SidebarProps> = ({
     isOpen,
     onToggle,
     activeFeature,
     onFeatureClick,
+    translations
 }) => {
+    // Apply translations to features
+    const translatedFeatures = FEATURES.map(f => ({
+        ...f,
+        label: translations ? (translations[f.id] || f.label) : f.label
+    }));
+
     return (
         <div
             style={{
@@ -155,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     willChange: 'transform',
                 }}
             >
-                {FEATURES.map((f) => (
+                {translatedFeatures.map((f) => (
                     <button
                         key={f.id}
                         id={`sidebar-${f.id}`}

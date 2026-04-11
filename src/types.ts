@@ -36,7 +36,8 @@ export type RightPanelView =
     | 'news-sentiment'
     | 'futures'
     | 'futures-confirm'
-    | 'learn-assistant';
+    | 'learn-assistant'
+    | 'backtest';
 
 export interface AppTransaction {
     id: string;
@@ -162,7 +163,8 @@ export type SidebarFeature =
     | 'journal'
     | 'news-sentiment'
     | 'futures'
-    | 'learn';
+    | 'learn'
+    | 'backtest';
 
 export interface AcademyLesson {
     id: string;
