@@ -46,6 +46,20 @@ export function detectAgent(
   if (msg === 'open journal' || msg.includes('analyze my trading')) return 'TRADE_JOURNAL';
   if (msg === 'open news') return 'NEWS_SENTIMENT';
 
+  // Portfolio health check triggers → always route to PORTFOLIO agent
+  if (
+    msg.includes('portfolio health') || msg.includes('check my portfolio') ||
+    msg.includes('how is my portfolio') || msg.includes('how are my holdings') ||
+    msg.includes('portfolio analysis') || msg.includes('portfolio performance') ||
+    msg.includes('what should i do with my portfolio')
+  ) return 'PORTFOLIO';
+
+  // Investment query triggers → route to GENERAL so research injection works universally
+  if (
+    (msg.includes('invest') || msg.includes('where should i put') || msg.includes('allocate')) &&
+    /\$?\d/.test(msg)
+  ) return 'GENERAL';
+
   // 2. High-Confidence Keyword Matching (Commands)
   if (msg.includes('swap ') || msg.includes('send ') || msg.includes('transfer ')) return 'WALLET';
   if (msg.includes('open long') || msg.includes('open short') || msg.includes('leverage')) return 'FUTURES';

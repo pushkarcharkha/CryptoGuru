@@ -443,10 +443,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                     </button>
 
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>
-                    Press <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Enter</kbd> to send
-                    &nbsp;·&nbsp;
-                    <kbd style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>Shift+Enter</kbd> for new line
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center', opacity: 0.8, fontStyle: 'italic' }}>
+                    We are like a co-pilot, not the pilot.
                 </div>
             </div>
         </div>
