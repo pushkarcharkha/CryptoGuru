@@ -9,6 +9,7 @@ interface ChatPanelProps {
     onClearChat: () => void;
     placeholder?: string;
     language?: 'english' | 'hindi';
+    activeFeature?: string | null;
 }
 
 // Simple markdown renderer for bold and links
@@ -95,7 +96,7 @@ const TypewriterMessage = ({ messageId, content }: { messageId: string, content:
     return <>{renderMarkdown(displayed)}</>;
 };
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat, placeholder, language = 'english' }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessage, onClearChat, placeholder, language = 'english', activeFeature }) => {
     const [input, setInput] = useState('');
     const [isListening, setIsListening] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -165,7 +166,52 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
         e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
     };
 
-    const QUICK_ACTIONS = language === 'hindi' ? [
+    const FEATURE_QUICK_ACTIONS: Record<string, { label: string; icon: React.ReactNode; msg: string }[]> = {
+        portfolio: [
+            { label: 'Portfolio Health', icon: <ShieldAlert size={14} />, msg: 'Give me a full portfolio health check — risk score, PnL, and what I should rebalance.' },
+            { label: 'Top Performer', icon: <Flame size={14} />, msg: 'Which of my holdings has performed best recently?' },
+            { label: 'Risk Score', icon: <BarChart2 size={14} />, msg: 'What is my current portfolio risk score and how can I reduce it?' },
+            { label: 'Rebalance Tips', icon: <Zap size={14} />, msg: 'Should I rebalance my portfolio right now based on current market conditions?' },
+        ],
+        journal: [
+            { label: 'Trade Summary', icon: <BarChart2 size={14} />, msg: 'Summarize my recent trading history and identify patterns.' },
+            { label: 'Win Rate', icon: <Zap size={14} />, msg: 'What is my win rate and average PnL from my closed trades?' },
+            { label: 'Mistakes', icon: <ShieldAlert size={14} />, msg: 'What trading mistakes am I repeating based on my history?' },
+            { label: 'Best Trade', icon: <Flame size={14} />, msg: 'What was my best trade and what made it successful?' },
+        ],
+        futures: [
+            { label: 'Long BTC 10x', icon: <Zap size={14} />, msg: 'Open a long BTC position with 10x leverage for $100' },
+            { label: 'Short ETH 5x', icon: <BarChart2 size={14} />, msg: 'Open a short ETH position with 5x leverage for $50' },
+            { label: 'My Positions', icon: <ShieldAlert size={14} />, msg: 'Show me my open futures positions and their current PnL' },
+            { label: 'Close All', icon: <Flame size={14} />, msg: 'What are my open futures positions right now?' },
+        ],
+        wallet: [
+            { label: 'My Contacts', icon: <BarChart2 size={14} />, msg: 'Show me all my saved contacts' },
+            { label: 'Add Contact', icon: <Zap size={14} />, msg: 'How do I add a new contact to my address book?' },
+            { label: 'Send Crypto', icon: <Flame size={14} />, msg: 'I want to send crypto to one of my contacts' },
+            { label: 'Check Balance', icon: <ShieldAlert size={14} />, msg: 'What is my current wallet balance?' },
+        ],
+        chart: [
+            { label: 'Analyze BTC', icon: <BarChart2 size={14} />, msg: 'Analyze the BTC chart and identify the current pattern' },
+            { label: 'ETH Setup', icon: <Zap size={14} />, msg: 'Show me the ETH chart setup and key levels to watch' },
+            { label: 'SOL Trend', icon: <Flame size={14} />, msg: 'What is the current SOL trend and support resistance levels?' },
+            { label: 'BNB Analysis', icon: <ShieldAlert size={14} />, msg: 'Analyze BNB chart pattern and give me the trade setup' },
+        ],
+        watchlist: [
+            { label: 'Add Bitcoin', icon: <Zap size={14} />, msg: 'Add Bitcoin to my watchlist' },
+            { label: 'Add Ethereum', icon: <BarChart2 size={14} />, msg: 'Add Ethereum to my watchlist' },
+            { label: 'Watchlist Update', icon: <Flame size={14} />, msg: 'How are my watchlisted coins performing today?' },
+            { label: 'Top Picks', icon: <ShieldAlert size={14} />, msg: 'Which coins should I add to my watchlist right now based on momentum?' },
+        ],
+        learn: [
+            { label: 'What is RSI?', icon: <BarChart2 size={14} />, msg: 'Explain RSI to me in simple terms and how to use it' },
+            { label: 'Support & Resistance', icon: <Zap size={14} />, msg: 'How do I identify support and resistance levels on a chart?' },
+            { label: 'Leverage Risk', icon: <ShieldAlert size={14} />, msg: 'Explain leverage in futures trading and the risks involved' },
+            { label: 'Chart Patterns', icon: <Flame size={14} />, msg: 'What are the most important chart patterns I should learn?' },
+        ],
+    };
+
+    const defaultActions = language === 'hindi' ? [
         { label: 'BTC विश्लेषण', icon: <BarChart2 size={14} />, msg: 'बीटीसी का चार्ट विश्लेषण करें — वर्तमान ट्रेंड, सपोर्ट/रेसिस्टेंस और ध्यान देने योग्य बातें।' },
         { label: 'टॉप मूवर्स', icon: <Flame size={14} />, msg: 'आज के टॉप क्रिप्टो मूवर्स कौन से हैं और क्या मुझे उनमें से किसी पर ध्यान देना चाहिए?' },
         { label: 'जोखिम जांच', icon: <ShieldAlert size={14} />, msg: 'क्रिप्टो मार्केट में इस समय कौन से बड़े जोखिम हैं जिनके बारे में मुझे पता होना चाहिए?' },
@@ -176,6 +222,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
         { label: 'Risk Check', icon: <ShieldAlert size={14} />, msg: 'What are the biggest risks in the crypto market right now I should know about?' },
         { label: 'Opportunity', icon: <Zap size={14} />, msg: 'What\'s the best risk/reward opportunity in crypto right now?' },
     ];
+
+    const QUICK_ACTIONS = (activeFeature && FEATURE_QUICK_ACTIONS[activeFeature]) || defaultActions;
+
 
     return (
         <div
@@ -349,8 +398,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Actions */}
-            {messages.length <= 2 && (
+            {/* Quick Actions - always show when 2 or fewer messages or on a feature section */}
+            {(messages.length <= 2 || (activeFeature && FEATURE_QUICK_ACTIONS[activeFeature])) && (
                 <div
                     className="fade-in"
                     style={{
