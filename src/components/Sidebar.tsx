@@ -6,7 +6,7 @@ interface SidebarProps {
     isOpen: boolean;
     onToggle: () => void;
     activeFeature: SidebarFeature | null;
-    onFeatureClick: (feature: SidebarFeature, message: string) => void;
+    onFeatureClick: (feature: SidebarFeature) => void;
     translations?: any;
 }
 
@@ -178,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                         key={f.id}
                         id={`sidebar-${f.id}`}
-                        onClick={() => onFeatureClick(f.id, f.message)}
+                        onClick={() => onFeatureClick(f.id)}
                         className={`sidebar-item ${activeFeature === f.id ? 'active' : ''}`}
                         style={{ width: '100%', background: 'none', border: activeFeature === f.id ? undefined : 'none', textAlign: 'left', cursor: 'pointer' }}
                         title={f.label}
