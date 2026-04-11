@@ -67,7 +67,7 @@ const Login: React.FC = () => {
     <div className="auth-page">
       <div className="auth-card-premium">
         <div className="auth-logo-section">
-          <img src={appLogo} alt="CryptoGuru" style={{ height: '80px', marginBottom: '12px' }} />
+          <img src={appLogo} alt="CryptoGuru" className="auth-logo" />
           <div className="auth-logo-text">CryptoGuru</div>
         </div>
 
