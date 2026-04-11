@@ -54,12 +54,37 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
         });
     };
 
+    const getNextLesson = (currentId: string): AcademyLesson | null => {
+        const allLessons: AcademyLesson[] = ACADEMY_CURRICULUM.flatMap(m => 
+            m.subsections.flatMap(s => s.lessons)
+        );
+        const currentIndex = allLessons.findIndex(l => l.id === currentId);
+        if (currentIndex === -1 || currentIndex === allLessons.length - 1) return null;
+        return allLessons[currentIndex + 1];
+    };
+
+    const handleNextLesson = () => {
+        if (!activeLesson) return;
+        const next = getNextLesson(activeLesson.id);
+        if (next) {
+            setActiveLesson(next);
+            setPreviewMode(true);
+            setSimulatorMode(false);
+            onOpenAssistant(next);
+        } else {
+            setSimulatorMode(false);
+            setPreviewMode(false);
+            setActiveLesson(null);
+        }
+    };
+
     if (simulatorMode && activeLesson) {
         return (
             <LearnSimulator 
                 lesson={activeLesson} 
                 onBack={() => setSimulatorMode(false)}
                 onComplete={() => handleProgressUpdate(activeLesson.id)}
+                onNextLesson={handleNextLesson}
             />
         );
     }
@@ -73,45 +98,69 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
     return (
         <div style={{ display: 'flex', height: '100%', background: '#07070c', color: '#e2e8f0' }}>
             {/* 3-Level Academy Sidebar */}
-            <div style={{ width: '340px', borderRight: '1px solid rgba(255,255,255,0.05)', padding: '24px', overflowY: 'auto', flexShrink: 0, background: '#0b0b14' }}>
+            <div style={{ 
+                width: '320px', 
+                borderRight: '1px solid rgba(255,255,255,0.05)', 
+                padding: '24px 16px', 
+                overflowY: 'auto', 
+                flexShrink: 0, 
+                background: '#0b0b14' 
+            }}>
                 
-                <div style={{ marginBottom: '32px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>Academy Progress</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
-                        <span>{completionRate}% Complete</span>
-                        <span style={{ color: 'var(--text-muted)' }}>{completedCount}/{totalLessons}</span>
+                <div style={{ padding: '0 8px', marginBottom: '32px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.1em' }}>
+                        <Presentation size={14} /> Curriculum Progress
                     </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${completionRate}%`, height: '100%', background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: 'width 0.5s ease' }} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                        <span style={{ color: '#fff' }}>{completionRate}% Mastered</span>
+                        <span style={{ color: '#64748b' }}>{completedCount}/{totalLessons}</span>
+                    </div>
+                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ width: `${completionRate}%`, height: '100%', background: 'linear-gradient(90deg, #00d4ff, #8b5cf6)', transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {ACADEMY_CURRICULUM.map(module => (
-                        <div key={module.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '12px' }}>
+                        <div key={module.id} style={{ marginBottom: '4px' }}>
                             <button 
                                 onClick={() => toggleModule(module.id)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', background: 'none', border: 'none', cursor: 'pointer', color: '#fff', textAlign: 'left' }}
+                                style={{ 
+                                    width: '100%', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between', 
+                                    padding: '12px', 
+                                    background: expandedModules[module.id] ? 'rgba(255,255,255,0.03)' : 'transparent', 
+                                    border: 'none', 
+                                    borderRadius: '10px',
+                                    cursor: 'pointer', 
+                                    color: expandedModules[module.id] ? '#fff' : '#64748b', 
+                                    textAlign: 'left',
+                                    transition: 'all 0.2s' 
+                                }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Book size={16} color="#8b5cf6" />
-                                    <span style={{ fontWeight: 800, fontSize: '13px', textTransform: 'uppercase' }}>{module.title}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: expandedModules[module.id] ? 'rgba(139, 92, 246, 0.1)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Book size={14} color={expandedModules[module.id] ? '#8b5cf6' : '#475569'} />
+                                    </div>
+                                    <span style={{ fontWeight: 700, fontSize: '13px' }}>{module.title}</span>
                                 </div>
-                                {expandedModules[module.id] ? <ChevronDown size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
+                                {expandedModules[module.id] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             </button>
 
                             {expandedModules[module.id] && (
-                                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '16px', paddingLeft: '8px' }}>
+                                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.05)', marginLeft: '23px' }}>
                                     {module.subsections.map(sub => (
-                                        <div key={sub.id}>
-                                            <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '8px', paddingLeft: '8px' }}>{sub.title}</div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div key={sub.id} style={{ marginBottom: '8px' }}>
+                                            <div style={{ fontSize: '10px', fontWeight: 800, color: '#334155', marginBottom: '8px', paddingLeft: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sub.title}</div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                 {sub.lessons.map(lesson => (
                                                     <button
                                                         key={lesson.id}
                                                         onClick={() => handleLessonSelect(lesson)}
                                                         style={{
-                                                            padding: '10px 12px',
+                                                            padding: '8px 12px',
                                                             borderRadius: '8px',
                                                             background: activeLesson?.id === lesson.id ? 'rgba(0, 212, 255, 0.08)' : 'transparent',
                                                             border: 'none',
@@ -120,19 +169,20 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '10px',
-                                                            width: '100%'
+                                                            width: '100%',
+                                                            transition: 'all 0.2s'
                                                         }}
                                                     >
                                                         <div style={{ 
-                                                            width: '18px', 
-                                                            height: '18px', 
+                                                            width: '16px', 
+                                                            height: '16px', 
                                                             borderRadius: '4px', 
                                                             background: progress.completedLessonIds.includes(lesson.id) ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.03)',
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                         }}>
-                                                            {progress.completedLessonIds.includes(lesson.id) ? <CheckCircle2 size={12} color="#10b981" /> : <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: activeLesson?.id === lesson.id ? '#00d4ff' : '#334155' }} />}
+                                                            {progress.completedLessonIds.includes(lesson.id) ? <CheckCircle2 size={10} color="#10b981" /> : <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: activeLesson?.id === lesson.id ? '#00d4ff' : '#1e293b' }} />}
                                                         </div>
-                                                        <span style={{ fontSize: '13px', fontWeight: 500, color: activeLesson?.id === lesson.id ? '#fff' : '#94a3b8' }}>{lesson.title}</span>
+                                                        <span style={{ fontSize: '12px', fontWeight: 600, color: activeLesson?.id === lesson.id ? '#fff' : '#94a3b8' }}>{lesson.title}</span>
                                                     </button>
                                                 ))}
                                             </div>
@@ -142,65 +192,79 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
                             )}
                         </div>
                     ))}
-                </div>
+                </nav>
             </div>
 
             {/* Content Display Area */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ flex: 1, overflowY: 'auto', background: '#07070c' }}>
                 {!activeLesson ? (
                     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', textAlign: 'center' }}>
-                        <div style={{ width: '64px', height: '64px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                            <Presentation size={32} color="#8b5cf6" />
+                        <div style={{ width: '80px', height: '80px', background: 'rgba(139, 92, 246, 0.05)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '32px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
+                            <Presentation size={40} color="#8b5cf6" />
                         </div>
-                        <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px' }}>Welcome to the Trading Academy</h2>
-                        <p style={{ color: '#64748b', maxWidth: '400px', lineHeight: 1.6 }}>Select a lesson from the curriculum to start your professional trading simulation.</p>
+                        <h2 style={{ fontSize: '28px', fontWeight: 900, marginBottom: '16px', color: '#fff' }}>Trading Academy Portal</h2>
+                        <p style={{ color: '#64748b', maxWidth: '440px', lineHeight: 1.6, fontSize: '16px' }}>Select a specialized module from the curriculum to begin your path to market mastery.</p>
                     </div>
                 ) : previewMode ? (
-                    <div className="fade-in" style={{ padding: '60px 80px', maxWidth: '900px', margin: '0 auto' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#00d4ff', fontSize: '13px', fontWeight: 700 }}>
-                            <ShieldCheck size={16} /> PROFESSIONAL MODULE
+                    <div className="fade-in" style={{ padding: '80px 100px', maxWidth: '1000px', margin: '0 auto' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', color: '#00d4ff', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            <ShieldCheck size={16} /> Decision-Making Simulation
                         </div>
-                        <h1 style={{ fontSize: '48px', fontWeight: 800, color: '#fff', marginBottom: '24px', lineHeight: 1.1 }}>{activeLesson.title}</h1>
-                        <p style={{ fontSize: '20px', color: '#94a3b8', lineHeight: 1.6, marginBottom: '48px' }}>{activeLesson.hook}</p>
+                        <h1 style={{ fontSize: '56px', fontWeight: 900, color: '#fff', marginBottom: '24px', lineHeight: 1, letterSpacing: '-0.02em' }}>{activeLesson.title}</h1>
+                        <p style={{ fontSize: '22px', color: '#94a3b8', lineHeight: 1.5, marginBottom: '60px', maxWidth: '800px' }}>{activeLesson.hook}</p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '48px' }}>
-                            <div style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#fff', fontWeight: 700 }}>
-                                    <Lightbulb size={18} color="#ffd700" /> Educational Goals
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '60px' }}>
+                            <div style={{ padding: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', color: '#fff', fontWeight: 800, fontSize: '14px', textTransform: 'uppercase' }}>
+                                    <Lightbulb size={18} color="#f59e0b" /> Learning Outcome
                                 </div>
-                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     {activeLesson.learningGoals.map((goal, i) => (
-                                        <li key={i} style={{ fontSize: '14px', color: '#cbd5e1', display: 'flex', gap: '8px' }}>
-                                            <div style={{ marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', background: '#8b5cf6', flexShrink: 0 }} />
+                                        <li key={i} style={{ fontSize: '14px', color: '#cbd5e1', display: 'flex', gap: '12px', lineHeight: 1.5 }}>
+                                            <div style={{ marginTop: '8px', width: '5px', height: '5px', borderRadius: '50%', background: '#8b5cf6', flexShrink: 0 }} />
                                             {goal}
                                         </li>
                                     ))}
                                 </ul>
                             </div>
-                            <div style={{ padding: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#fff', fontWeight: 700 }}>
-                                    <ListChecks size={18} color="#00d4ff" /> Activity Overview
+                            <div style={{ padding: '32px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', color: '#fff', fontWeight: 800, fontSize: '14px', textTransform: 'uppercase' }}>
+                                    <ListChecks size={18} color="#00d4ff" /> Practical Activity
                                 </div>
-                                <p style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.6 }}>{activeLesson.activityOverview}</p>
-                                <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
-                                    <div style={{ padding: '4px 10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>CHART TASK</div>
-                                    <div style={{ padding: '4px 10px', background: 'rgba(0, 212, 255, 0.1)', color: '#00d4ff', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>TRADE SIM</div>
+                                <p style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.7 }}>{activeLesson.activityOverview}</p>
+                                <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                                    <div style={{ padding: '6px 14px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '8px', fontSize: '10px', fontWeight: 900, letterSpacing: '0.05em' }}>TECHNICAL TASK</div>
+                                    <div style={{ padding: '6px 14px', background: 'rgba(0, 212, 255, 0.1)', color: '#00d4ff', borderRadius: '8px', fontSize: '10px', fontWeight: 900, letterSpacing: '0.05em' }}>TRADING SIM</div>
                                 </div>
                             </div>
                         </div>
 
                         <button 
                             onClick={handleStartSimulation}
-                            style={{ width: '100%', padding: '18px', background: 'linear-gradient(135deg, #00d4ff, #8b5cf6)', color: '#000', border: 'none', borderRadius: '14px', fontWeight: 800, fontSize: '16px', cursor: 'pointer', boxShadow: '0 8px 30px rgba(0, 212, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}
+                            style={{ 
+                                width: '100%', 
+                                padding: '24px', 
+                                background: 'linear-gradient(135deg, #00d4ff, #8b5cf6)', 
+                                color: '#000', 
+                                border: 'none', 
+                                borderRadius: '16px', 
+                                fontWeight: 900, 
+                                fontSize: '18px', 
+                                cursor: 'pointer', 
+                                boxShadow: '0 10px 40px rgba(0, 212, 255, 0.2)', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '16px',
+                                transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                         >
-                            <Play size={20} fill="currentColor" /> Initialize Training Environment
+                            <Play size={24} fill="currentColor" /> Enter Simulation Environment
                         </button>
                     </div>
-                ) : (
-                    <div style={{ height: '100%' }}>
-                        {/* Static lesson view or content here if needed, but we go to simulatorMode */}
-                    </div>
-                )}
+                ) : null}
             </div>
         </div>
     );

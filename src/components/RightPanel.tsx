@@ -1148,13 +1148,13 @@ const RightPanel: React.FC<RightPanelProps> = ({
                             flexDirection: 'column', 
                             gap: '12px' 
                         }}>
-                            {messages.filter(m => !m.content.startsWith('The user is now studying:')).length === 0 ? (
+                            {messages.filter(m => !m.content.includes('[ACADEMY_CONTEXT]') && m.content !== 'MENTOR_ACTIVATED').length === 0 ? (
                                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', paddingTop: '40px' }}>
                                     I'm your dedicated crypto tutor. Ask me about the current lesson, or for examples and simpler explanations!
                                 </div>
                             ) : (
                                 messages
-                                    .filter(m => !m.content.startsWith('The user is now studying:'))
+                                    .filter(m => !m.content.includes('[ACADEMY_CONTEXT]') && m.content !== 'MENTOR_ACTIVATED')
                                     .map((m, i) => (
                                     <div key={i} style={{
                                         alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',

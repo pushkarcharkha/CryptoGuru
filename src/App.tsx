@@ -997,9 +997,10 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                             onOpenAssistant={(lesson: AcademyLesson) => {
                                 setRightPanelView('learn-assistant');
                                 // Hidden instruction to AI to contextualize as a teacher for this lesson
-                                const contextMsg = `The user is now studying: ${lesson.title} (${lesson.level}). 
-                                Summary of lesson: ${lesson.explanation.substring(0, 100)}...
-                                Act as a teacher. If the user asks questions, explain clearly and use analogies.`;
+                                const contextMsg = `[ACADEMY_CONTEXT]
+                                Lesson: ${lesson.title} (${lesson.level})
+                                Summary: ${lesson.explanation.substring(0, 100)}...
+                                HANDSHAKE: Respond ONLY with "MENTOR_ACTIVATED".`;
                                 
                                 sendMessage(contextMsg, {
                                     address: wallet.address,

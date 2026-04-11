@@ -167,22 +167,6 @@ export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futu
     return (
         <div style={{ position: 'relative', width: '100%' }}>
             <div ref={chartContainerRef} />
-            {selectedPrice && (
-                <div style={{
-                    position: 'absolute',
-                    top: '10px',
-                    left: '10px',
-                    background: 'rgba(0, 212, 255, 0.1)',
-                    border: '1px solid #00d4ff',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#00d4ff',
-                    zIndex: 10
-                }}>
-                    Selection: ${selectedPrice.toFixed(2)}
-                </div>
-            )}
         </div>
     );
 };
