@@ -37,7 +37,8 @@ export type RightPanelView =
     | 'futures'
     | 'futures-confirm'
     | 'learn-assistant'
-    | 'backtest';
+    | 'backtest'
+    | 'strategies';
 
 export interface AppTransaction {
     id: string;
@@ -164,13 +165,15 @@ export type SidebarFeature =
     | 'news-sentiment'
     | 'futures'
     | 'learn'
-    | 'backtest';
+    | 'backtest'
+    | 'strategies';
 
 export interface AcademyLesson {
     id: string;
     title: string;
     hook: string;
-    explanation: string;
+    theory: string; // 3-5 lines max
+    explanation: string; // Detailed context
     learningGoals: string[];
     activityOverview: string;
     realExample: string;
@@ -179,8 +182,10 @@ export interface AcademyLesson {
     category: string;
     chartTasks: ChartTask[];
     simulation: SimulationStep;
+    quiz?: QuizQuestion[];
 }
 
+export type SimulatorLesson = SimulationStep;
 export interface AcademySubsection {
     id: string;
     title: string;
@@ -227,6 +232,7 @@ export interface QuizQuestion {
     explanation: string;
 }
 
+
 export interface NewsArticle {
     title: string;
     url: string;
@@ -244,10 +250,13 @@ export interface FearGreedData {
 }
 export interface PriceAlert {
     id: string;
-    symbol: string;
     coinId: string;
+    symbol: string;
     targetPrice: number;
     condition: 'above' | 'below';
+    type?: 'price' | 'strategy';
+    patternName?: string;
+    message?: string;
     isTriggered: boolean;
     createdAt: number;
 }
@@ -255,15 +264,39 @@ export interface PriceAlert {
 export interface ChartPatternOverlay {
     name: string;
     points: { time: number; price: number; label?: string }[];
-    lines: { 
-        startPrice: number; 
-        endPrice: number; 
-        startTime: number; 
-        endTime: number; 
-        color?: string; 
+    lines: {
+        startPrice: number;
+        endPrice: number;
+        startTime: number;
+        endTime: number;
+        color?: string;
         type?: 'resistance' | 'support' | 'trend';
         dashed?: boolean;
     }[];
     breakoutZone?: number;
     confidence: 'Low' | 'Medium' | 'High';
+}
+export interface StrategyCondition {
+    id: string;
+    type: 'pattern' | 'indicator' | 'price';
+    target: string; // e.g., 'RSI', 'BTC', 'EMA200', 'Head & Shoulders'
+    operator: '>' | '<' | 'crosses_above' | 'crosses_below' | 'is_forming';
+    value: string | number;
+    timeframe: string;
+}
+
+export interface TradingStrategy {
+    id: string;
+    name: string;
+    coin: string | 'ANY';
+    timeframe: string;
+    logic: 'AND' | 'OR';
+    conditions: StrategyCondition[];
+    investmentAmount: number;
+    description?: string;
+    lastTriggered?: number;
+    lastChecked?: number;
+    status?: 'scanning' | 'triggered' | 'error';
+    isActive: boolean;
+    createdAt: number;
 }

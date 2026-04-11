@@ -11,14 +11,18 @@ interface LearningChartProps {
     };
     showSimulation?: boolean;
     futureData?: any[];
+    showAnswer?: boolean;
+    answerRange?: [number, number];
 }
 
-export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futureData }: LearningChartProps) => {
+export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futureData, showAnswer, answerRange }: LearningChartProps) => {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<any>(null);
     const seriesRef = useRef<any>(null);
+    const answerLineRef = useRef<any>(null);
     const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
 
+    // 1. Initial Chart Setup
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
@@ -26,20 +30,43 @@ export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futu
             layout: {
                 background: { type: ColorType.Solid, color: 'transparent' },
                 textColor: '#94a3b8',
+                fontSize: 11,
             },
             grid: {
-                vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
-                horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
+                vertLines: { color: 'rgba(255, 255, 255, 0.02)' },
+                horzLines: { color: 'rgba(255, 255, 255, 0.02)' },
             },
             width: chartContainerRef.current.clientWidth,
-            height: 400,
+            height: 500,
             timeScale: {
                 borderVisible: false,
                 timeVisible: true,
                 secondsVisible: false,
+                barSpacing: 5,
+                minBarSpacing: 1,
+                rightOffset: 5,
             },
             rightPriceScale: {
                 borderVisible: false,
+                scaleMargins: {
+                    top: 0.2,
+                    bottom: 0.2,
+                },
+            },
+            crosshair: {
+                mode: 0,
+                vertLine: {
+                    color: 'rgba(0, 212, 255, 0.5)',
+                    width: 1,
+                    style: 3,
+                    labelBackgroundColor: '#00d4ff',
+                },
+                horzLine: {
+                    color: 'rgba(0, 212, 255, 0.5)',
+                    width: 1,
+                    style: 3,
+                    labelBackgroundColor: '#00d4ff',
+                },
             },
         });
 
@@ -57,27 +84,6 @@ export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futu
         chartRef.current = chart;
         seriesRef.current = candlestickSeries;
 
-        // Task Interaction: Click to identify S/R
-        if (task?.type === 'identify-sr') {
-            chart.subscribeClick((param) => {
-                if (!param.point || !param.time) return;
-                const price = candlestickSeries.coordinateToPrice(param.point.y);
-                if (price !== null) {
-                    setSelectedPrice(price);
-                    
-                    if (task.targetPriceRange) {
-                        const [min, max] = task.targetPriceRange;
-                        if (price >= min && price <= max) {
-                            onTaskComplete?.(true);
-                        } else {
-                            // Give some visual feedback that it's wrong? 
-                            // For now we'll just let the parent handle the "Try Again"
-                        }
-                    }
-                }
-            });
-        }
-
         const handleResize = () => {
             if (chartContainerRef.current) {
                 chart.applyOptions({ width: chartContainerRef.current.clientWidth });
@@ -90,22 +96,73 @@ export const LearningChart = ({ data, onTaskComplete, task, showSimulation, futu
             window.removeEventListener('resize', handleResize);
             chart.remove();
         };
-    }, [data, task, onTaskComplete]);
+    }, [data]);
 
-    // Update data when simulation starts
+    // 2. Task Interaction
+    useEffect(() => {
+        if (!chartRef.current || !seriesRef.current || !task) return;
+
+        const clickHandler = (param: any) => {
+            if (!param.point || !param.time || !task.targetPriceRange) return;
+            
+            const price = seriesRef.current.coordinateToPrice(param.point.y);
+            if (price !== null) {
+                setSelectedPrice(price);
+                const [min, max] = task.targetPriceRange;
+                
+                if (price >= min && price <= max) {
+                    onTaskComplete?.(true);
+                } else {
+                    onTaskComplete?.(false);
+                }
+            }
+        };
+
+        chartRef.current.subscribeClick(clickHandler);
+        return () => {
+            chartRef.current.unsubscribeClick(clickHandler);
+        };
+    }, [task, onTaskComplete]);
+
+    // 3. Reveal Answer Logic
+    useEffect(() => {
+        if (!seriesRef.current) return;
+
+        if (showAnswer && answerRange) {
+            const midpoint = (answerRange[0] + answerRange[1]) / 2;
+            answerLineRef.current = seriesRef.current.createPriceLine({
+                price: midpoint,
+                color: '#10b981',
+                lineWidth: 2,
+                lineStyle: 1, 
+                axisLabelVisible: true,
+                title: 'CORRECT ZONE',
+            });
+        } else {
+            if (answerLineRef.current) {
+                seriesRef.current.removePriceLine(answerLineRef.current);
+                answerLineRef.current = null;
+            }
+        }
+    }, [showAnswer, answerRange]);
+
+    // 4. Simulation Update Logic
+    const simulationIntervalRef = useRef<any>(null);
     useEffect(() => {
         if (showSimulation && futureData && seriesRef.current) {
             let i = 0;
-            const interval = setInterval(() => {
+            simulationIntervalRef.current = setInterval(() => {
                 if (i < futureData.length) {
                     seriesRef.current.update(futureData[i]);
                     i++;
                 } else {
-                    clearInterval(interval);
+                    if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current);
                 }
-            }, 500); // 500ms per candle fast-forward
-            return () => clearInterval(interval);
+            }, 500);
         }
+        return () => {
+            if (simulationIntervalRef.current) clearInterval(simulationIntervalRef.current);
+        };
     }, [showSimulation, futureData]);
 
     return (

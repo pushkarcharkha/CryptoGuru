@@ -23,10 +23,31 @@ export const useAlerts = () => {
                 symbol,
                 targetPrice,
                 condition,
+                type: 'price',
                 isTriggered: false,
                 createdAt: Date.now()
             };
             const newList = [...prev, newAlert];
+            localStorage.setItem('cryptoguru_alerts', JSON.stringify(newList));
+            return newList;
+        });
+    };
+
+    const addStrategyAlert = (coinId: string, symbol: string, patternName: string, message: string) => {
+        setAlerts(prev => {
+            const newAlert: PriceAlert = {
+                id: Math.random().toString(36).substr(2, 9),
+                coinId,
+                symbol,
+                targetPrice: 0,
+                condition: 'above',
+                type: 'strategy',
+                patternName,
+                message,
+                isTriggered: true, // Auto-triggered as it's a notification of a past event
+                createdAt: Date.now()
+            };
+            const newList = [newAlert, ...prev];
             localStorage.setItem('cryptoguru_alerts', JSON.stringify(newList));
             return newList;
         });
@@ -59,6 +80,7 @@ export const useAlerts = () => {
     return {
         alerts,
         addAlert,
+        addStrategyAlert,
         removeAlert,
         markAsTriggered,
         clearTriggered

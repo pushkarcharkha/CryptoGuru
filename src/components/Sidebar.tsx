@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, GraduationCap } from 'lucide-react';
+import { Briefcase, Wallet, Clock, BarChart2, Radio, Activity, BookOpen, GraduationCap, Zap } from 'lucide-react';
 import type { SidebarFeature } from '../types';
 
 interface SidebarProps {
@@ -70,6 +70,12 @@ const FEATURES: {
             icon: <Activity size={20} />,
             label: 'Backtest Results',
             message: 'Backtest Dashboard: Analyze the historical performance of my signals and strategies.',
+        },
+        {
+            id: 'strategies',
+            icon: <Zap size={20} />,
+            label: 'Strategy Builder',
+            message: 'Show me my automated strategies. Help me build a new strategy with custom indicators or pattern alerts.',
         },
     ];
 const Sidebar: React.FC<SidebarProps> = ({

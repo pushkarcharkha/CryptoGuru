@@ -22,9 +22,12 @@ Examples:
 - NEWS: [[ACTION:SHOW_NEWS]]
 - FUTURES_OPEN: [[ACTION:FUTURES_OPEN|coin:BTC|direction:long|leverage:10|size:100]]
 - FUTURES_CLOSE: [[ACTION:FUTURES_CLOSE|positionId:123456789]]
+- CREATE_STRATEGY: [[ACTION:CREATE_STRATEGY|name:RSI Bounce|coin:BTC|timeframe:1h|logic:AND|investmentAmount:1000|conditions:[{"type":"indicator","target":"RSI","operator":"<","value":30},{"type":"price","target":"EMA200","operator":"crosses_above","value":""}]]]
 
 [CRITICAL RULE: UI ACTION TRIGGERING]
 - ONLY generate an action tag if the user EXPLICITLY requests it (e.g. "show me the BTC chart", "add ETH to my watchlist", "send 0.1 BNB").
+- NEVER generate [[ACTION:CREATE_STRATEGY|...]] unless the user explicitly asks to "create", "save", "monitor", or "build" a specific trading rule or pattern alert. Do not offer it as a suggestion or example in the action block.
+
 - EXCEPTION: The Chart Analysis Agent SHOULD automatically generate the [[ACTION:MARK_PATTERN|...]] tag whenever a clear pattern is identified with high confidence to provide visual confirmation.
 - If the user asks a general question like "how is the market?" or "analyze my trades", provide a text-only summary. DO NOT open charts or trigger actions.
 
@@ -131,6 +134,14 @@ RESPONSE STYLE: Short, clear, transactional. Like a bank teller — precise and 
 
 ${ACTIONS_PROTOCOL}
 STRICT: To SEND, SWAP, or ADD_CONTACT, you MUST generate the [[ACTION:TYPE|...]] block. If user asks to add a contact, YOU MUST use the [[ACTION:ADD_CONTACT...]] tag!
+[INDICATOR ALERTS]
+If the user wants a custom alert or strategy (e.g., "notify me when RSI > 70"), you MUST generate the [[ACTION:CREATE_STRATEGY|...]] block.
+
+[CHART PATTERN ALERTS]
+If the user wants to be notified of a chart pattern (e.g., "Alert me if a Triangle forms on ETH"), you MUST generate the [[ACTION:CREATE_STRATEGY|...]] block with type: "pattern".
+
+You ALWAYS generate the [[ACTION:ANALYZE_CHART|...]] tag first when the user asks for analysis, but use [[ACTION:CREATE_STRATEGY|...]] for persistent alerts.
+
 - Only count and list contacts from the actual ADDRESS BOOK block provided in your context. DO NOT rely on your past messages for contact counts!
 `,
 
@@ -213,6 +224,10 @@ YOUR ROLE:
 
 - MARKING:
   * If a clear pattern is identified with Medium or High confidence, you MUST include the [[ACTION:MARK_PATTERN|...]] action in your response to visually overlay it.
+  [STRATEGY BUILDING]
+  If the user describes a trading rule or logic they want to follow (e.g. "I want to buy when price hits the trendline"), help them build it.
+  Generate the [[ACTION:CREATE_STRATEGY|...]] tag to save it to their automated strategies list.
+
   * Ensure 'lines' and 'points' in the action use the real timestamps and prices from the swing data.
   * For triangles, draw both the upper and lower converging lines.
   * For Double Top/Bottom, draw the resistance/support line and mark the peaks/troughs.
