@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, TrendingUp, Target, BarChart, ShieldCheck, DollarSign, Activity } from 'lucide-react';
 import { AnimatedNumber } from './AnimatedNumber';
 import { createChart, ColorType, CandlestickSeries, AreaSeries } from 'lightweight-charts';
 

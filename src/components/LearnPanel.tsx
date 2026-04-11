@@ -201,7 +201,7 @@ const LearnPanel: React.FC<LearnPanelProps> = ({ onOpenAssistant }) => {
                                     <Lightbulb size={18} color="#f59e0b" /> Learning Outcome
                                 </div>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {activeLesson.learningGoals.map((goal: string, i: number) => (
+                                    {activeLesson.learningGoals?.map((goal: string, i: number) => (
                                         <li key={i} style={{ fontSize: '14px', color: '#cbd5e1', display: 'flex', gap: '12px', lineHeight: 1.5 }}>
                                             <div style={{ marginTop: '8px', width: '5px', height: '5px', borderRadius: '50%', background: '#8b5cf6', flexShrink: 0 }} />
                                             {goal}
