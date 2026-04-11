@@ -1,4 +1,4 @@
-import { Bot, Radio, ArrowRightLeft, LogOut, Bell, Trash2 } from 'lucide-react';
+import { Bot, Radio, ArrowRightLeft, LogOut, Bell, Trash2, Zap } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import type { CryptoPrice, WalletState, PriceAlert } from '../types';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -180,7 +180,7 @@ const TopBar: React.FC<TopBarProps> = ({
               <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }} className="custom-scrollbar">
                 {alerts.length === 0 ? (
                   <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                    No alerts set. Type "Notify me when BTC hits 70000" in chat.
+                    No alerts set. Create an AI Strategy to get notified here.
                   </div>
                 ) : (
                   alerts.slice().sort((a,b) => b.createdAt - a.createdAt).map(alert => (
@@ -194,14 +194,28 @@ const TopBar: React.FC<TopBarProps> = ({
                       gap: '4px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#00d4ff' }}>{alert.symbol.toUpperCase()}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {alert.type === 'strategy' ? <Zap size={12} color="#00ff88" /> : null}
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: alert.type === 'strategy' ? '#00ff88' : '#00d4ff' }}>
+                            {alert.type === 'strategy' ? 'STRATEGY MATCH' : alert.symbol.toUpperCase()}
+                          </span>
+                        </div>
                         <button onClick={() => removeAlert(alert.id)} style={{ background: 'transparent', border: 'none', color: '#ff3366', cursor: 'pointer', padding: '2px' }}><Trash2 size={12} /></button>
                       </div>
-                      <div style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Target: ${alert.targetPrice.toLocaleString()}</span>
-                        <span style={{ color: alert.isTriggered ? '#00ff88' : 'var(--text-muted)', fontWeight: 600 }}>
-                          {alert.isTriggered ? 'TRIGGERED' : 'PENDING'}
-                        </span>
+                      <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {alert.type === 'strategy' ? (
+                          <>
+                            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{alert.patternName} on {alert.symbol}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>{alert.message}</span>
+                          </>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Target: ${alert.targetPrice.toLocaleString()}</span>
+                            <span style={{ color: alert.isTriggered ? '#00ff88' : 'var(--text-muted)', fontWeight: 600 }}>
+                              {alert.isTriggered ? 'TRIGGERED' : 'PENDING'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))

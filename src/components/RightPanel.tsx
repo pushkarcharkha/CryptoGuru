@@ -11,6 +11,10 @@ import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
 import { AnimatedNumber } from './AnimatedNumber';
+import { useStrategies } from '../hooks/useStrategies';
+import { StrategyBuilderModal } from './StrategyBuilderModal';
+import { StrategyCard } from './StrategyCard';
+import { Zap } from 'lucide-react';
 import {
     Send as SendIcon,
     AlertTriangle,
@@ -18,6 +22,7 @@ import {
     Trash2,
     Search,
     Book,
+    Plus,
     CheckCircle,
     XCircle,
     Clock,
@@ -283,6 +288,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
+    const { strategies, addStrategy, deleteStrategy, toggleStrategy, updateStrategy } = useStrategies();
+    const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
+    const [editingStrategy, setEditingStrategy] = React.useState<any>(null);
 
     const holdingsWithValues = (wallet.holdings || []).map((h) => {
         const priceObj = prices.find((p) => p.symbol.toLowerCase() === h.symbol.toLowerCase());
@@ -954,6 +962,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         
                         <MemoryCard memory={memory} />
 
+
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
                             <input
                                 type="text"
@@ -1104,8 +1113,92 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 })}
                             </div>
                         )}
+
                     </div>
                 )}
+
+                {/* ===== STRATEGIES VIEW (Dedicated) ===== */}
+                {view === 'strategies' && (
+                    <div className="panel-content fade-in">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Zap size={20} color="#00ff88" /> Strategy Builder
+                            </h2>
+                            <button
+                                onClick={() => {
+                                    setEditingStrategy(null);
+                                    setIsBuilderOpen(true);
+                                }}
+                                style={{
+                                    background: 'rgba(0, 255, 136, 0.1)',
+                                    border: '1px solid #00ff88',
+                                    color: '#00ff88',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <Plus size={14} /> New Strategy
+                            </button>
+                        </div>
+
+                        <div className="glass-card" style={{ padding: '16px', marginBottom: '24px', border: '1px solid rgba(0, 212, 255, 0.1)' }}>
+                            <p style={{ fontSize: '13px', color: '#e2e8f0', margin: '0 0 8px 0', fontWeight: 600 }}>How it works</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
+                                Define custom rules for technical indicators, price levels, or chart patterns. 
+                                Cryptoguru will monitor these locally and alert you when conditions are met.
+                            </p>
+                        </div>
+
+                        {strategies.length === 0 ? (
+                            <div style={{ 
+                                padding: '40px 20px', 
+                                background: 'rgba(255,255,255,0.02)', 
+                                borderRadius: '16px', 
+                                border: '1px dashed var(--border-subtle)',
+                                textAlign: 'center'
+                            }}>
+                                <Zap size={32} color="#444466" style={{ marginBottom: '16px' }} />
+                                <p style={{ fontSize: '14px', color: '#666688', margin: 0 }}>No automation rules yet.</p>
+                                <p style={{ fontSize: '11px', color: '#444466', marginTop: '8px' }}>Click "New Strategy" to build your first automated trading logic.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {strategies.map(s => (
+                                    <StrategyCard 
+                                        key={s.id} 
+                                        strategy={s} 
+                                        onToggle={toggleStrategy} 
+                                        onDelete={deleteStrategy}
+                                        onEdit={(strat) => {
+                                            setEditingStrategy(strat);
+                                            setIsBuilderOpen(true);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        <StrategyBuilderModal 
+                            isOpen={isBuilderOpen}
+                            onClose={() => setIsBuilderOpen(false)}
+                            initialData={editingStrategy}
+                            onSave={(data) => {
+                                if (editingStrategy) {
+                                    updateStrategy(editingStrategy.id, data);
+                                } else {
+                                    addStrategy(data);
+                                }
+                            }}
+                        />
+                    </div>
+                )}
+
 
                 {/* ===== FUTURES VIEW ===== */}
                 {view === 'futures' && (
