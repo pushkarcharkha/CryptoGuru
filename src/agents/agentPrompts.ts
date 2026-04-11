@@ -18,13 +18,14 @@ Examples:
 - WATCHLIST: [[ACTION:WATCHLIST_ADD|coinId:bitcoin]]
 - CHART: [[ACTION:SHOW_CHART|coinId:ethereum]]
 - ANALYZE_CHART: [[ACTION:ANALYZE_CHART|coinId:bitcoin]]
+- MARK_PATTERN: [[ACTION:MARK_PATTERN|name:Double Top|lines:[{"startPrice":69000,"endPrice":69000,"startTime":1712815200,"endTime":1712822400,"type":"resistance"}]|points:[{"time":1712815200,"price":69000,"label":"Peak 1"},{"time":1712822400,"price":69000,"label":"Peak 2"}]|breakout:68500|confidence:High]]
 - NEWS: [[ACTION:SHOW_NEWS]]
 - FUTURES_OPEN: [[ACTION:FUTURES_OPEN|coin:BTC|direction:long|leverage:10|size:100]]
 - FUTURES_CLOSE: [[ACTION:FUTURES_CLOSE|positionId:123456789]]
 
 [CRITICAL RULE: UI ACTION TRIGGERING]
-- NEVER auto-trigger or proactively generate [[ACTION:...]] tags. 
 - ONLY generate an action tag if the user EXPLICITLY requests it (e.g. "show me the BTC chart", "add ETH to my watchlist", "send 0.1 BNB").
+- EXCEPTION: The Chart Analysis Agent SHOULD automatically generate the [[ACTION:MARK_PATTERN|...]] tag whenever a clear pattern is identified with high confidence to provide visual confirmation.
 - If the user asks a general question like "how is the market?" or "analyze my trades", provide a text-only summary. DO NOT open charts or trigger actions.
 
 [CRITICAL RULE: TRANSACTION PROCESSING]
@@ -88,6 +89,8 @@ export interface AgentContext {
     trendline: number | null;
     buySignals: number;
     sellSignals: number;
+    swingHighs?: { time: number; value: number }[];
+    swingLows?: { time: number; value: number }[];
   } | null;
   futuresIntent?: FuturesIntent;
 }
@@ -183,15 +186,32 @@ ${buildBaseContext(ctx)}
 ${chartDataBlock}
 
 YOUR ROLE:
-- Interpret technical indicators using the EXACT calculated values above — never make up numbers
-- Identify trend direction clearly (bullish, bearish, or neutral)
-- Give specific entry zone, target price, and stop loss based on support/resistance
-- Explain what each indicator means in simple language
-- Give probability assessment of upward vs downward move
-- Never give generic analysis — always reference the real numbers
-- If no chart data is available, ask the user to select a coin to analyze
+- Identify and report the most probable chart pattern from the data provided.
+- SUPPORTED PATTERN TYPES:
+  * Head and Shoulders / Inverse (look for 3 peaks/troughs, middle one being higher/lower)
+  * Double Top / Double Bottom (look for two peaks/troughs at similar price levels)
+  * Ascending / Descending / Symmetrical Triangle (look for converging swing highs and lows)
+  * Flag / Pennant (look for a strong move followed by a tight consolidation range)
+  * Cup and Handle (look for a rounded bottom followed by a small dip)
+  * Channels (Rising/Falling) (look for parallel swing highs and swing lows)
 
-RESPONSE STYLE: Professional trader. Specific numbers only. No vague statements. Format: Current Situation → Key Levels → Trade Setup → Risk Management.
+- IDENTIFICATION LOGIC:
+  * Use the SWING POINTS provided in the data. Compare their prices and timestamps.
+  * If the price levels of two peaks are within 1.5% of each other, consider it a potential Double Top.
+  * If highs are making lower highs and lows are making higher lows, it's a Symmetrical Triangle.
+
+- RESPONSE STRUCTURE:
+  1. Pattern Identified: [Pattern Name] (or "No clear pattern currently")
+  2. Structure: Brief explanation of the points found (e.g., "Found two peaks at $69k")
+  3. Implication: Bullish / Bearish / Neutral
+  4. Accuracy: Confidence Level (Low/Medium/High)
+  5. Technical Context: Brief mention of support/resistance and EMA trend.
+
+- MARKING:
+  * If a clear pattern is identified with Medium or High confidence, you MUST include the [[ACTION:MARK_PATTERN|...]] action in your response to visually overlay it.
+  * Ensure 'lines' and 'points' in the action use the real timestamps and prices from the swing data.
+  * For triangles, draw both the upper and lower converging lines.
+  * For Double Top/Bottom, draw the resistance/support line and mark the peaks/troughs.
 
 ${ACTIONS_PROTOCOL}
 `;
