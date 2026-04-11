@@ -16,18 +16,22 @@ interface TAStats {
   buySignals: number;
   sellSignals: number;
   trendline?: number;
+  swingHighs: { time: number; value: number }[];
+  swingLows: { time: number; value: number }[];
 }
 
 interface TechnicalAnalysisChartProps {
   coinId: string;
   coinSymbol: string;
   onAnalysisComplete?: (stats: TAStats) => void;
+  patternOverlay?: import('../types').ChartPatternOverlay | null;
 }
 
 export const TechnicalAnalysisChart = ({ 
   coinId, 
   coinSymbol,
-  onAnalysisComplete 
+  onAnalysisComplete,
+  patternOverlay
 }: TechnicalAnalysisChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,21 +92,21 @@ export const TechnicalAnalysisChart = ({
     return ema;
   };
 
-  const findTrendlinePoints = (candles: any[], type: 'low' | 'high') => {
+  const findSwings = (candles: any[], type: 'low' | 'high', strength = 3) => {
     const values = type === 'low' ? candles.map(c => c.low) : candles.map(c => c.high);
-    const significantPoints = [];
-    for (let i = 2; i < values.length - 2; i++) {
-      if (type === 'low') {
-        if (values[i] < values[i - 1] && values[i] < values[i - 2] && values[i] < values[i + 1] && values[i] < values[i + 2]) {
-          significantPoints.push({ time: candles[i].time, value: values[i] });
+    const swings = [];
+    for (let i = strength; i < values.length - strength; i++) {
+        let isSwing = true;
+        for (let j = 1; j <= strength; j++) {
+            if (type === 'low') {
+                if (values[i] >= values[i - j] || values[i] >= values[i + j]) { isSwing = false; break; }
+            } else {
+                if (values[i] <= values[i - j] || values[i] <= values[i + j]) { isSwing = false; break; }
+            }
         }
-      } else {
-        if (values[i] > values[i - 1] && values[i] > values[i - 2] && values[i] > values[i + 1] && values[i] > values[i + 2]) {
-          significantPoints.push({ time: candles[i].time, value: values[i] });
-        }
-      }
+        if (isSwing) swings.push({ time: candles[i].time, value: values[i] });
     }
-    return significantPoints.slice(-3);
+    return swings;
   };
 
   useEffect(() => {
@@ -210,15 +214,16 @@ export const TechnicalAnalysisChart = ({
           title: `Sup $${supportValue.toFixed(2)}`,
         });
 
-        // 4. Trendline
-        const trendlinePoints = findTrendlinePoints(candles, 'low');
+        // 4. Trendline & Swings
+        const swingLows = findSwings(candles, 'low');
+        const swingHighs = findSwings(candles, 'high');
         let trendlineValue: number | undefined = undefined;
-        if (trendlinePoints.length >= 2) {
-          const p1 = trendlinePoints[trendlinePoints.length - 2];
-          const p2 = trendlinePoints[trendlinePoints.length - 1];
+
+        if (swingLows.length >= 2) {
+          const p1 = swingLows[swingLows.length - 2];
+          const p2 = swingLows[swingLows.length - 1];
           trendlineValue = p2.value;
 
-          // Only draw if timestamps are strictly increasing
           if (p2.time > p1.time) {
               const trendSeries = chart.addSeries(LineSeries, {
                 color: '#00d4ff',
@@ -232,6 +237,49 @@ export const TechnicalAnalysisChart = ({
                 { time: p2.time, value: p2.value }
               ]);
           }
+        }
+
+        // 5. Pattern Overlay Rendering
+        if (patternOverlay) {
+            // Draw points as markers
+            if (patternOverlay.points && patternOverlay.points.length > 0) {
+                const markers = patternOverlay.points.map(p => ({
+                    time: p.time as any,
+                    position: (p.price > closes[closes.length - 1] ? 'aboveBar' : 'belowBar') as any,
+                    color: '#f59e0b',
+                    shape: 'circle',
+                    text: p.label || '',
+                }));
+                candleSeries.setMarkers(markers);
+            }
+
+            // Draw lines
+            patternOverlay.lines.forEach((line) => {
+                const layer = chart.addSeries(LineSeries, {
+                    color: line.color || '#00ff88',
+                    lineWidth: 3,
+                    lineStyle: line.dashed ? LineStyle.Dashed : LineStyle.Solid,
+                    lastValueVisible: false,
+                    priceLineVisible: false,
+                    title: line.type?.toUpperCase() || ''
+                });
+                layer.setData([
+                    { time: line.startTime as any, value: line.startPrice },
+                    { time: line.endTime as any, value: line.endPrice }
+                ]);
+            });
+
+            // Draw Breakout Zone
+            if (patternOverlay.breakoutZone) {
+                candleSeries.createPriceLine({
+                    price: patternOverlay.breakoutZone,
+                    color: '#f59e0b',
+                    lineWidth: 2,
+                    lineStyle: LineStyle.Solid,
+                    axisLabelVisible: true,
+                    title: 'Breakout Zone',
+                });
+            }
         }
 
         // Fit content
@@ -259,7 +307,9 @@ export const TechnicalAnalysisChart = ({
             coinSymbol: coinSymbol.toUpperCase(),
             buySignals: buyCount,
             sellSignals: sellCount,
-            trendline: trendlineValue
+            trendline: trendlineValue,
+            swingHighs: swingHighs.slice(-10),
+            swingLows: swingLows.slice(-10)
           });
         }
       } catch (err) {
@@ -277,7 +327,7 @@ export const TechnicalAnalysisChart = ({
         chart.remove();
       }
     };
-  }, [coinId, coinSymbol]);
+  }, [coinId, coinSymbol, patternOverlay]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '300px' }}>

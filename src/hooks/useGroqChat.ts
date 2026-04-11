@@ -238,8 +238,12 @@ Virtual Balance: $${futuresContext?.balance || '1000'}`;
           const type = parts[0];
           const params: Record<string, string> = {};
           parts.slice(1).forEach((p: string) => {
-            const [k, v] = p.split(':');
-            if (k && v) params[k.trim()] = v.trim();
+            const firstColon = p.indexOf(':');
+            if (firstColon !== -1) {
+              const k = p.substring(0, firstColon).trim();
+              const v = p.substring(firstColon + 1).trim();
+              params[k] = v;
+            }
           });
           onActionDetectedRef.current(type, params);
           aiContent = aiContent.replace(/\[\[ACTION:.*?\]\]/g, '').trim();

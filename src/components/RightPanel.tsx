@@ -63,6 +63,7 @@ interface RightPanelProps {
     onDeclineFutures?: () => void;
     chartShouldAnalyze?: boolean;
     onAnalysisComplete?: (stats: any) => void;
+    patternOverlay?: import('../types').ChartPatternOverlay | null;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -203,6 +204,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     onDeclineFutures,
     chartShouldAnalyze,
     onAnalysisComplete,
+    patternOverlay,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -449,6 +451,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                     coinId={activeCoin.id}
                                     coinSymbol={activeCoin.symbol}
                                     onAnalysisComplete={chartShouldAnalyze ? onAnalysisComplete : undefined}
+                                    patternOverlay={patternOverlay}
                                 />
                             ) : (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>

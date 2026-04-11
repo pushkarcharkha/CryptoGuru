@@ -186,3 +186,19 @@ export interface PriceAlert {
     isTriggered: boolean;
     createdAt: number;
 }
+
+export interface ChartPatternOverlay {
+    name: string;
+    points: { time: number; price: number; label?: string }[];
+    lines: { 
+        startPrice: number; 
+        endPrice: number; 
+        startTime: number; 
+        endTime: number; 
+        color?: string; 
+        type?: 'resistance' | 'support' | 'trend';
+        dashed?: boolean;
+    }[];
+    breakoutZone?: number;
+    confidence: 'Low' | 'Medium' | 'High';
+}

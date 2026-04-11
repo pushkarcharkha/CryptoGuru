@@ -19,7 +19,7 @@ import { usePancakeSwap, BNB_TOKENS } from './hooks/usePancakeSwap';
 import ChartModal from './components/ChartModal';
 import { WalletConnectAnimation } from './components/WalletConnectAnimation';
 import { Mic, MicOff } from 'lucide-react';
-import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
+import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition, ChartPatternOverlay } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
 import { supabase } from './lib/supabase';
@@ -51,6 +51,7 @@ function App() {
     const [manualPanelOverride, setManualPanelOverride] = useState<RightPanelView | null>(null);
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
+    const [activePattern, setActivePattern] = useState<ChartPatternOverlay | null>(null);
 
     const [showScanline, setShowScanline] = useState(true);
     const [showWalletAnim, setShowWalletAnim] = useState(false);
@@ -362,6 +363,21 @@ function App() {
                     addSystemMessageProxy(`Alert set! I'll notify you when **${coinObj.symbol.toUpperCase()}** goes ${condition} **$${parseFloat(price).toLocaleString()}**.`);
                 }
             }
+        } else if (action === 'MARK_PATTERN') {
+            try {
+                const { name, lines, points, breakout, confidence } = params;
+                setActivePattern({
+                    name,
+                    lines: JSON.parse(lines || '[]'),
+                    points: JSON.parse(points || '[]'),
+                    breakoutZone: breakout ? parseFloat(breakout) : undefined,
+                    confidence: (confidence as any) || 'Medium'
+                });
+                setRightPanelView('coin-chart');
+                setMobileView('panel');
+            } catch (err: any) {
+                console.error("Pattern Marking Error:", err);
+            }
         }
     }, [wallet.networkName, wallet.address, getSwapQuote, addSystemMessageProxy, toggleWatchlist, allCoins, manualPanelOverride, setPanelSafe, prices, openPosition, closePosition, futuresPositions, getLivePnL, apiKey, fearGreedData, newsData]);
 
@@ -426,12 +442,19 @@ EMA Cross: ${stats.ema20 > stats.ema50 ? 'EMA20 above EMA50 — Bullish' : 'EMA2
 Buy Signals detected: ${stats.buySignals}
 Sell Signals detected: ${stats.sellSignals}
 
-Using ONLY these exact numbers give a professional trading analysis. Include:
-- Where price is relative to support and resistance
-- What the EMA cross means
-- Suggested entry zone, target and stop loss
+Using ONLY these exact numbers and swing points, identify the most probable chart pattern (e.g., Head & Shoulders, Triangle, Double Top, etc.).
+Structure your response as:
+1. Pattern Identified
+2. Structure found
+3. Implication
+4. Confidence
+5. Trading Setup (Entry, Target, Stop Loss)
 - Overall trend direction
-- Risk level`;
+- Risk level
+
+CHART SWING POINTS (Anchor pattern markings to these):
+Highs: ${JSON.stringify(stats.swingHighs)}
+Lows: ${JSON.stringify(stats.swingLows)}`;
 
             // Use the ref because we don't want sendMessage to be a dependency (circular)
             // Actually, we can just call sendMessage from the hook since we have it here
@@ -452,7 +475,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         } finally {
             setTimeout(() => { chartAnalysisInProgress = false; }, 5000);
         }
-    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions]);
+    }, [sendMessage, wallet, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, setMobileView]);
 
     // Handle sidebar feature click → preset message + panel update
     const handleFeatureClick = useCallback(
@@ -513,7 +536,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 sendMessage(message, walletCtx, sentimentCtx, futuresCtx, feature);
             }
         },
-        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions]
+        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, setRightPanelView, setManualPanelOverride, setActiveFeature, setActiveTab, setActiveCoin]
     );
 
     const handleConfirmTransaction = useCallback(async () => {
@@ -609,7 +632,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 });
             }
         }
-    }, [wallet.isConnected, wallet.networkName, transactionPreview, addSystemMessage, addSystemMessageProxy, getExplorerUrl, refreshBalances, saveTransaction]);
+    }, [wallet.isConnected, wallet.networkName, transactionPreview, addSystemMessage, addSystemMessageProxy, getExplorerUrl, refreshBalances, saveTransaction, setTransactionPreview]);
 
     const handleConfirmSwap = useCallback(async () => {
         if (!wallet.isConnected || !window.ethereum || !swapPreview) {
@@ -685,7 +708,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 network: 'BNB Smart Chain'
             });
         }
-    }, [wallet.isConnected, wallet.address, swapPreview, addSystemMessageProxy, approveToken, getExplorerUrl, refreshBalances, saveTransaction]);
+    }, [wallet.isConnected, wallet.address, swapPreview, addSystemMessageProxy, approveToken, getExplorerUrl, refreshBalances, saveTransaction, setSwapPreview, setRightPanelView, executeSwap]);
 
     const handleSendMessage = useCallback(
         (content: string) => {
@@ -777,6 +800,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 addUserMessage(content);
                 setActiveCoin(detectedCoin);
                 setChartShouldAnalyze(true);
+                setActivePattern(null); // Clear previous pattern
                 setRightPanelView('coin-chart');
                 setManualPanelOverride('coin-chart');
                 setMobileView('panel');
@@ -799,7 +823,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 positions: futuresPositions
             }, activeFeature);
         },
-        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView]
+        [sendMessage, addUserMessage, addContact, removeContact, contacts, allCoins, wallet.address, wallet.holdings, history, watchlistIds, fearGreedData, newsData, futuresBalance, futuresPositions, activeFeature, addAlert, addSystemMessage, mobileView, setMobileView, setRightPanelView, setManualPanelOverride, setActiveCoin, setChartShouldAnalyze, setActivePattern, prices]
     );
 
     const toggleListeningMobile = () => {
@@ -880,7 +904,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
         } else {
             setRightPanelView('portfolio');
         }
-    }, [wallet.isConnected, connectWallet]);
+    }, [wallet.isConnected, connectWallet, setRightPanelView]);
 
     const handleOpenExchange = useCallback(() => {
         setExchangeOpen(true);
@@ -1028,6 +1052,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                     activeCoin={activeCoin}
                     chartShouldAnalyze={chartShouldAnalyze}
                     onAnalysisComplete={handleAnalysisComplete}
+                    patternOverlay={activePattern}
                     newsData={newsData}
                     fearGreedData={fearGreedData}
                     newsLoading={newsLoading}

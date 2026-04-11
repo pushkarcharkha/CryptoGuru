@@ -49,7 +49,7 @@ export function detectAgent(
   // 2. High-Confidence Keyword Matching (Commands)
   if (msg.includes('swap ') || msg.includes('send ') || msg.includes('transfer ')) return 'WALLET';
   if (msg.includes('open long') || msg.includes('open short') || msg.includes('leverage')) return 'FUTURES';
-  if (msg.includes('chart ') || msg.includes('candlestick') || msg.includes('trendline')) return 'CHART_ANALYSIS';
+  if (msg.includes('chart ') || msg.includes('candlestick') || msg.includes('trendline') || msg.includes('pattern')) return 'CHART_ANALYSIS';
   if (msg.includes('fear and greed') || msg.includes('sentiment')) return 'NEWS_SENTIMENT';
 
   // 3. Section Bias (If they are currently looking at a section, prefer that section for ambiguous queries)
