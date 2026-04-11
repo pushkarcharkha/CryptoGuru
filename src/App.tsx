@@ -535,25 +535,9 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
     // Handle sidebar feature click → preset message + panel update
     const handleFeatureClick = useCallback(
-        (feature: SidebarFeature, message: string) => {
+        (feature: SidebarFeature) => {
             setActiveFeature(feature);
             setActiveTab('agent');
-
-            const walletCtx = {
-                address: wallet.address,
-                holdings: wallet.holdings,
-                contacts,
-                history,
-                watchlist: watchlistIds
-            };
-            const sentimentCtx = {
-                fearGreed: fearGreedData,
-                news: newsData
-            };
-            const futuresCtx = {
-                balance: futuresBalance,
-                positions: futuresPositions
-            };
 
             // Update right panel based on feature
             if (feature === 'portfolio') {
@@ -602,7 +586,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 // Silent
             }
         },
-        [sendMessage, addSystemMessage, wallet.address, wallet.holdings, contacts, history, watchlistIds, allCoins, fearGreedData, newsData, futuresBalance, futuresPositions, memory, language]
+        [setActiveFeature, setActiveTab, setRightPanelView, setManualPanelOverride, setActiveCoin]
     );
 
     const handleConfirmTransaction = useCallback(async () => {
@@ -1256,7 +1240,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                 setMobileView('chat');
                             } else {
                                 setMobileView('panel');
-                                handleFeatureClick(f.id as any, '');
+                                handleFeatureClick(f.id as any);
                             }
                         }}
                     >
