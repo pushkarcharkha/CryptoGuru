@@ -1251,8 +1251,19 @@ body {
 }
 
 .auth-logo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     margin-bottom: 40px;
+}
+
+.auth-logo {
+    height: 120px;
+    width: auto;
+    object-fit: contain;
+    margin-bottom: 16px;
 }
 
 .auth-logo-text {
@@ -1431,7 +1442,7 @@ body {
 }
 
 .topbar-logo {
-    height: 150px;
+    height: 60px;
     width: auto;
     object-fit: contain;
     display: block;
@@ -1556,7 +1567,7 @@ body {
     }
 
     .topbar-logo {
-        height: 100px;
+        height: 52px;
     }
 
     .topbar-tab-label {
@@ -1593,7 +1604,7 @@ body {
     }
 
     .topbar-logo {
-        height: 64px;
+        height: 48px;
     }
 
     .topbar-user-info {
@@ -1854,7 +1865,7 @@ body {
     }
 
     .topbar-logo {
-        height: 55px;
+        height: 44px;
     }
 
     .topbar-tabs {
@@ -1948,7 +1959,7 @@ body {
 /* --- LARGE DESKTOP (≥1440px) --- */
 @media (min-width: 1440px) {
     .topbar-logo {
-        height: 160px;
+        height: 64px;
     }
 
     .topbar-tab-btn {
