@@ -6,7 +6,7 @@ import {
     Pie,
     Cell,
 } from 'recharts';
-import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, SwapPreview, AppTransaction, CoinGeckoCoin, NewsArticle, FearGreedData, FuturesPosition } from '../types';
+import type { CryptoPrice, RightPanelView, WalletState, TransactionPreview, SwapPreview, AppTransaction, CoinGeckoCoin, NewsArticle, FearGreedData, FuturesPosition, Message, AcademyLesson } from '../types';
 import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
@@ -65,6 +65,9 @@ interface RightPanelProps {
     onAnalysisComplete?: (stats: any) => void;
     memory?: any;
     patternOverlay?: import('../types').ChartPatternOverlay | null;
+    messages?: Message[];
+    onSendMessage?: (msg: string) => void;
+    isLoading?: boolean;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -272,6 +275,9 @@ const RightPanel: React.FC<RightPanelProps> = ({
     onDeclineFutures,
     chartShouldAnalyze,
     onAnalysisComplete,
+    messages = [],
+    onSendMessage,
+    isLoading,
     memory,
     patternOverlay,
 }) => {
@@ -1118,6 +1124,88 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         onConfirm={onConfirmFutures}
                         onDecline={onDeclineFutures}
                     />
+                )}
+
+                {/* ===== LEARN ASSISTANT VIEW ===== */}
+                {view === 'learn-assistant' && (
+                    <div className="panel-content fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Book size={18} color="#8b5cf6" />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>AI Tutor</h2>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>Learning Assistant</p>
+                            </div>
+                        </div>
+
+                        <div style={{ 
+                            flex: 1, 
+                            overflowY: 'auto', 
+                            marginBottom: '16px', 
+                            paddingRight: '4px',
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '12px' 
+                        }}>
+                            {messages.filter(m => !m.content.startsWith('The user is now studying:')).length === 0 ? (
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', paddingTop: '40px' }}>
+                                    I'm your dedicated crypto tutor. Ask me about the current lesson, or for examples and simpler explanations!
+                                </div>
+                            ) : (
+                                messages
+                                    .filter(m => !m.content.startsWith('The user is now studying:'))
+                                    .map((m, i) => (
+                                    <div key={i} style={{
+                                        alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                                        maxWidth: '90%',
+                                        padding: '10px 14px',
+                                        borderRadius: '12px',
+                                        background: m.role === 'user' ? 'rgba(0, 212, 255, 0.1)' : 'rgba(255,255,255,0.03)',
+                                        border: '1px solid',
+                                        borderColor: m.role === 'user' ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.05)',
+                                        fontSize: '13px',
+                                        lineHeight: '1.5',
+                                        color: m.role === 'user' ? '#fff' : '#cbd5e1'
+                                    }}>
+                                        {m.content}
+                                    </div>
+                                ))
+                            )}
+                            {isLoading && (
+                                <div style={{ alignSelf: 'flex-start', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', fontSize: '13px', color: '#64748b' }}>
+                                    Tutor is thinking...
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type="text"
+                                placeholder="Ask teacher..."
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim() && onSendMessage) {
+                                        onSendMessage(e.currentTarget.value.trim());
+                                        e.currentTarget.value = '';
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 14px',
+                                    paddingRight: '40px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: '10px',
+                                    color: '#fff',
+                                    fontSize: '13px',
+                                    outline: 'none'
+                                }}
+                            />
+                            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>
+                                <SendIcon size={14} color="#00d4ff" />
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
 
