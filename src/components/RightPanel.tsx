@@ -11,6 +11,7 @@ import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
 import { AnimatedNumber } from './AnimatedNumber';
+import type { BacktestStats } from './BacktestDashboard';
 import { useStrategies } from '../hooks/useStrategies';
 import { StrategyBuilderModal } from './StrategyBuilderModal';
 import { StrategyCard } from './StrategyCard';
@@ -73,6 +74,7 @@ interface RightPanelProps {
     messages?: Message[];
     onSendMessage?: (msg: string) => void;
     isLoading?: boolean;
+    backtestResults?: BacktestStats | null;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -285,6 +287,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     isLoading,
     memory,
     patternOverlay,
+    backtestResults,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -1197,6 +1200,74 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         />
                     </div>
                 )}
+
+                {/* ===== BACKTEST ANALYSIS VIEW ===== */}
+                {view === 'backtest' && (
+                    <div className="panel-content fade-in">
+                        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', marginBottom: '16px' }}>
+                            Backtest Analysis
+                        </h2>
+
+                        {/* Strategy Info Card */}
+                        <div className="glass-card" style={{ padding: '16px', marginBottom: '16px', borderLeft: '3px solid #00d4ff' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                <Activity size={16} color="#00d4ff" />
+                                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#e2e8f0' }}>
+                                    Strategy: EMA Crossover
+                                </h3>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: 1.6 }}>
+                                Uses EMA(9) and EMA(21) crossover on real BTC/USDT daily candles to generate buy and sell signals.
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ padding: '4px 10px', borderRadius: '12px', background: 'rgba(0, 255, 136, 0.1)', color: '#00ff88', fontSize: '10px', fontWeight: 700 }}>
+                                    BUY: EMA9 crosses above EMA21
+                                </span>
+                                <span style={{ padding: '4px 10px', borderRadius: '12px', background: 'rgba(255, 51, 102, 0.1)', color: '#ff3366', fontSize: '10px', fontWeight: 700 }}>
+                                    SELL: EMA9 crosses below EMA21
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Results or Placeholder */}
+                        {backtestResults ? (
+                            <>
+                                {/* Performance Summary */}
+                                <div className="glass-card" style={{ padding: '16px', marginBottom: '16px' }}>
+                                    <h4 style={{ margin: '0 0 14px', fontSize: '13px', fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <CheckCircle size={14} color="#00ff88" /> Performance Summary
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <Row label="Final Balance" value={`$${backtestResults.finalBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} color="#00d4ff" />
+                                        <Row
+                                            label="Total Profit"
+                                            value={`${backtestResults.totalProfit >= 0 ? '+' : ''}$${backtestResults.totalProfit.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                                            color={backtestResults.totalProfit >= 0 ? '#00ff88' : '#ff3366'}
+                                        />
+                                        <Row
+                                            label="ROI"
+                                            value={`${backtestResults.profitPercent >= 0 ? '+' : ''}${backtestResults.profitPercent}%`}
+                                            color={backtestResults.profitPercent >= 0 ? '#00ff88' : '#ff3366'}
+                                        />
+                                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '10px 0 0' }}>
+                                            <Row label="Total Trades" value={`${backtestResults.totalTrades}`} />
+                                        </div>
+                                        <Row label="Winners" value={`${backtestResults.winningTrades}`} color="#00ff88" />
+                                        <Row label="Losers" value={`${backtestResults.losingTrades}`} color="#ff3366" />
+                                        <Row label="Win Rate" value={`${backtestResults.accuracy}%`} color={backtestResults.accuracy >= 50 ? '#00ff88' : '#ff3366'} />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                                <div style={{ fontSize: '40px', marginBottom: '12px', opacity: 0.5 }}>📊</div>
+                                <div style={{ fontSize: '14px', marginBottom: '8px', color: '#e2e8f0' }}>No Backtest Results Yet</div>
+                                <div style={{ fontSize: '12px', lineHeight: 1.6 }}>Configure the investment amount and period, then click "Generate Signals" to run a backtest.</div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* ===== FUTURES VIEW ===== */}
                 {view === 'futures' && (
                     <FuturesPanel

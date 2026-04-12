@@ -7,6 +7,7 @@ import SignalFeed from './components/SignalFeed';
 import SettingsModal from './components/SettingsModal';
 import ExchangeModal from './components/ExchangeModal';
 import BacktestDashboard from './components/BacktestDashboard';
+import type { BacktestStats } from './components/BacktestDashboard';
 import { useGroqChat } from './hooks/useGroqChat';
 import { useWallet, TOKEN_ADDRESSES } from './hooks/useWallet';
 import { useCryptoPrices } from './hooks/useCrypto';
@@ -92,6 +93,7 @@ function App() {
     const [exchangeOpen, setExchangeOpen] = useState(false);
     const [pendingFuturesPosition, setPendingFuturesPosition] = useState<any | null>(null);
     const [patternOverlay, setPatternOverlay] = useState<ChartPatternOverlay | null>(null);
+    const [backtestResults, setBacktestResults] = useState<BacktestStats | null>(null);
     const [language, setLanguageState] = useState<'english' | 'hindi'>(() => (localStorage.getItem('preferredLanguage') as any) || 'english');
 
     const [showScanline, setShowScanline] = useState(true);
@@ -579,7 +581,8 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 // Silent - user will pick a lesson
             } else if (feature === 'backtest') {
                 setActiveTab('agent');
-                // No message needed, just open the dashboard
+                setRightPanelView('backtest');
+                setManualPanelOverride('backtest');
             } else {
                 setRightPanelView('prices');
                 setManualPanelOverride('prices');
@@ -1114,7 +1117,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                             }}
                         />
                     ) : activeFeature === 'backtest' ? (
-                        <BacktestDashboard />
+                        <BacktestDashboard onResultsReady={setBacktestResults} />
                     ) : (
                         activeTab === 'agent' ? (
                             <ChatPanel
@@ -1183,6 +1186,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                         isLoading={isLoading}
                         memory={memory}
                         patternOverlay={patternOverlay}
+                        backtestResults={backtestResults}
                     />
 
                     {/* Mobile Quick Chat - Only visible on Mobile when Panel is active */}

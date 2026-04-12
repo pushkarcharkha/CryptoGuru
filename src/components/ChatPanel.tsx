@@ -174,7 +174,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, isLoading, onSendMessag
             { label: 'Rebalance Tips', icon: <Zap size={14} />, msg: 'Should I rebalance my portfolio right now based on current market conditions?' },
         ],
         journal: [
-            { label: 'Trade Summary', icon: <BarChart2 size={14} />, msg: 'Summarize my recent trading history and identify patterns.' },
+            { label: 'Trade Summary', icon: <BarChart2 size={14} />, msg: 'Summarize my recent trading history.' },
             { label: 'Win Rate', icon: <Zap size={14} />, msg: 'What is my win rate and average PnL from my closed trades?' },
             { label: 'Mistakes', icon: <ShieldAlert size={14} />, msg: 'What trading mistakes am I repeating based on my history?' },
             { label: 'Best Trade', icon: <Flame size={14} />, msg: 'What was my best trade and what made it successful?' },

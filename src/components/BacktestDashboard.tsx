@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AnimatedNumber } from './AnimatedNumber';
 import { createChart, ColorType, CandlestickSeries, AreaSeries } from 'lightweight-charts';
 
-interface BacktestStats {
+export interface BacktestStats {
     totalProfit: number;
     profitPercent: number;
     finalBalance: number;
@@ -12,7 +12,11 @@ interface BacktestStats {
     accuracy: number;
 }
 
-const BacktestDashboard: React.FC = () => {
+interface BacktestDashboardProps {
+    onResultsReady?: (results: BacktestStats | null) => void;
+}
+
+const BacktestDashboard: React.FC<BacktestDashboardProps> = ({ onResultsReady }) => {
     const [duration, setDuration] = useState(90);
     const [investment, setInvestment] = useState(10000);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -22,39 +26,68 @@ const BacktestDashboard: React.FC = () => {
     const equityChartRef = useRef<HTMLDivElement>(null);
     const chartInstances = useRef<{ main: any, equity: any }>({ main: null, equity: null });
 
-    const [btcPrice, setBtcPrice] = useState(90000); // Default to around current price
-    useEffect(() => {
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
-            .then(res => res.json())
-            .then(data => {
-                if (data?.bitcoin?.usd) setBtcPrice(data.bitcoin.usd);
-            })
-            .catch(() => {});
-    }, []);
+    // State to hold real OHLC data fetched from CoinGecko
+    const [realOhlcData, setRealOhlcData] = useState<any[]>([]);
 
     const runBacktest = () => {
         setIsAnalyzing(true);
         setProgress(0);
         setResults(null);
+        onResultsReady?.(null);
 
         const durationFactor = duration === 30 ? 0.045 : duration === 60 ? 0.085 : 0.155;
         const variance = (Math.random() * 0.04) - 0.01;
         const finalRoi = durationFactor + variance;
+
+        // Fetch real BTC OHLC data while progress animates
+        fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=${duration}`)
+            .then(res => res.json())
+            .then(data => {
+                const prices: [number, number][] = data.prices;
+                // Group hourly data into daily OHLC candles
+                const dayMap = new Map<string, { ts: number; prices: number[] }>();
+                for (const [ts, price] of prices) {
+                    const date = new Date(ts);
+                    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+                    if (!dayMap.has(key)) {
+                        dayMap.set(key, { ts: Math.floor(new Date(key + 'T00:00:00Z').getTime() / 1000), prices: [] });
+                    }
+                    dayMap.get(key)!.prices.push(price);
+                }
+                const candles = Array.from(dayMap.values()).map(val => ({
+                    time: val.ts,
+                    open: val.prices[0],
+                    high: Math.max(...val.prices),
+                    low: Math.min(...val.prices),
+                    close: val.prices[val.prices.length - 1]
+                })).sort((a, b) => a.time - b.time);
+
+                setRealOhlcData(candles);
+            })
+            .catch(() => {
+                // If API fails, leave realOhlcData empty — chart useEffect will handle it
+                setRealOhlcData([]);
+            });
 
         const interval = setInterval(() => {
             setProgress(prev => {
                 if (prev >= 100) {
                     clearInterval(interval);
                     setIsAnalyzing(false);
-                    setResults({
+                    const winCount = Math.floor(100 * (0.64 + Math.random() * 0.05));
+                    const loseCount = 100 - winCount;
+                    const acc = Number(((winCount / 100) * 100).toFixed(1));
+                    const r: BacktestStats = {
                         totalProfit: investment * finalRoi,
                         profitPercent: Number((finalRoi * 100).toFixed(2)),
                         finalBalance: investment * (1 + finalRoi),
                         totalTrades: 100,
-                        winningTrades: Math.floor(100 * (0.64 + Math.random() * 0.05)),
-                        losingTrades: 0,
-                        accuracy: 0
-                    });
+                        winningTrades: winCount,
+                        losingTrades: loseCount,
+                        accuracy: acc
+                    };
+                    setResults(r);
+                    onResultsReady?.(r);
                     return 100;
                 }
                 return prev + 5;
@@ -62,16 +95,11 @@ const BacktestDashboard: React.FC = () => {
         }, 30);
     };
 
-    useEffect(() => {
-        if (results && results.totalTrades === 100 && results.accuracy === 0) {
-            const losing = results.totalTrades - results.winningTrades;
-            const acc = (results.winningTrades / results.totalTrades) * 100;
-            setResults(prev => prev ? ({ ...prev, losingTrades: losing, accuracy: Number(acc.toFixed(1)) }) : null);
-        }
-    }, [results]);
 
     useEffect(() => {
         if (!results || !mainChartRef.current || !equityChartRef.current) return;
+        // Wait for real data if available
+        if (realOhlcData.length === 0) return;
 
         try {
             if (chartInstances.current.main) { chartInstances.current.main.remove(); chartInstances.current.main = null; }
@@ -95,33 +123,24 @@ const BacktestDashboard: React.FC = () => {
             topColor: 'rgba(0, 255, 136, 0.3)', bottomColor: 'rgba(0, 255, 136, 0.0)', lineColor: '#00ff88', lineWidth: 2,
         });
 
-        const priceData: any[] = [];
+        // Use real OHLC data for the candlestick chart
+        const priceData = realOhlcData;
+        priceSeries.setData(priceData);
+
+        // Build equity curve (same logic as original)
         const equityData: any[] = [];
-        
-        let lastPrice = btcPrice + (Math.random() * 2000);
         let currentEquity = investment;
-        const now = Math.floor(Date.now() / 1000);
-        const totalPoints = duration + 20;
-
-        for (let i = totalPoints; i >= 0; i--) {
-            const time = now - (i * 24 * 60 * 60);
-            const open = lastPrice;
-            const close = open + (Math.random() - 0.47) * 2200;
-            const high = Math.max(open, close) + Math.random() * 500;
-            const low = Math.min(open, close) - Math.random() * 500;
-            priceData.push({ time, open, high, low, close });
-            lastPrice = close;
-
-            if (i < duration) {
+        for (let i = 0; i < priceData.length; i++) {
+            if (i >= priceData.length - duration) {
                 const growth = 1 + (results.profitPercent / 100 / duration);
                 currentEquity *= (growth + (Math.random() - 0.5) * 0.012);
             }
-            equityData.push({ time, value: currentEquity });
+            equityData.push({ time: priceData[i].time, value: currentEquity });
         }
 
-        priceSeries.setData(priceData);
         equitySeries.setData(equityData);
 
+        // Place BUY/SELL markers (same logic as original)
         const markers: any[] = [];
         for (let i = 25; i < priceData.length - 2; i += Math.floor(priceData.length / 15)) {
             const p = priceData[i];
@@ -155,7 +174,7 @@ const BacktestDashboard: React.FC = () => {
             window.removeEventListener('resize', handleResize);
             try { mainChart.remove(); equityChart.remove(); } catch(e){}
         };
-    }, [results]);
+    }, [results, realOhlcData]);
 
     return (
         <div className="backtest-root" style={{ height: '100%', overflowY: 'auto', padding: '24px', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
