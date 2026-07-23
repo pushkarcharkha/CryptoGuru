@@ -11,6 +11,7 @@ import NewsSentimentPanel from './NewsSentimentPanel';
 import FuturesPanel from './FuturesPanel';
 import { TechnicalAnalysisChart } from './TechnicalAnalysisChart';
 import { AnimatedNumber } from './AnimatedNumber';
+import type { BacktestStats } from './BacktestDashboard';
 import { useStrategies } from '../hooks/useStrategies';
 import { StrategyBuilderModal } from './StrategyBuilderModal';
 import { StrategyCard } from './StrategyCard';
@@ -73,6 +74,7 @@ interface RightPanelProps {
     messages?: Message[];
     onSendMessage?: (msg: string) => void;
     isLoading?: boolean;
+    backtestResults?: BacktestStats | null;
 }
 
 function formatPrice(n: number | null | undefined) {
@@ -87,159 +89,159 @@ function formatChange(n: number | null | undefined) {
     return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
 }
 
-const Row = ({ label, value, color = '#e2e8f0' }: {label: string, value: string, color?: string}) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-    <span style={{ color: '#8888aa' }}>{label}</span>
-    <span style={{ color, fontWeight: '600', fontFamily: 'JetBrains Mono' }}>{value}</span>
-  </div>
+const Row = ({ label, value, color = '#e2e8f0' }: { label: string, value: string, color?: string }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+        <span style={{ color: '#8888aa' }}>{label}</span>
+        <span style={{ color, fontWeight: '600', fontFamily: 'JetBrains Mono' }}>{value}</span>
+    </div>
 );
 
 const FuturesConfirmCard = ({ position, onConfirm, onDecline }: any) => {
-  const [sl, setSl] = React.useState('');
-  const [tp, setTp] = React.useState('');
+    const [sl, setSl] = React.useState('');
+    const [tp, setTp] = React.useState('');
 
-  return (
-    <div style={{
-      background: '#111128',
-      border: '1px solid #1a1a3a',
-      borderRadius: '12px',
-      padding: '20px',
-      margin: '12px'
-    }}>
-      <h3 style={{ color: '#00ff88', marginBottom: '16px', marginTop: 0 }}>Position Preview</h3>
-      
-      {/* Market Context */}
-      <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-        <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Trend: {position.trend}</p>
-        <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Support: ${position.support}</p>
-        <p style={{ margin: '0', fontSize: '13px', color: '#e2e8f0' }}>Resistance: ${position.resistance}</p>
-      </div>
-      
-      {/* Position Details */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-        <Row label="Direction" value={position.direction.toUpperCase()} />
-        <Row label="Leverage" value={`${position.leverage}x`} />
-        <Row label="Size" value={`$${position.size}`} />
-        <Row label="Entry" value={`$${position.entryPrice}`} />
-        <Row label="Margin" value={`$${position.margin}`} />
-        <Row label="Liquidation" value={`$${position.liquidationPrice}`} color="#ff3366" />
-      </div>
+    return (
+        <div style={{
+            background: '#111128',
+            border: '1px solid #1a1a3a',
+            borderRadius: '12px',
+            padding: '20px',
+            margin: '12px'
+        }}>
+            <h3 style={{ color: '#00ff88', marginBottom: '16px', marginTop: 0 }}>Position Preview</h3>
 
-      {/* SL/TP Inputs */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Stop Loss Price</label>
-          <input 
-            type="number"
-            value={sl}
-            onChange={(e) => setSl(e.target.value)}
-            placeholder="None"
-            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
-          />
+            {/* Market Context */}
+            <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Trend: {position.trend}</p>
+                <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#e2e8f0' }}>Support: ${position.support}</p>
+                <p style={{ margin: '0', fontSize: '13px', color: '#e2e8f0' }}>Resistance: ${position.resistance}</p>
+            </div>
+
+            {/* Position Details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                <Row label="Direction" value={position.direction.toUpperCase()} />
+                <Row label="Leverage" value={`${position.leverage}x`} />
+                <Row label="Size" value={`$${position.size}`} />
+                <Row label="Entry" value={`$${position.entryPrice}`} />
+                <Row label="Margin" value={`$${position.margin}`} />
+                <Row label="Liquidation" value={`$${position.liquidationPrice}`} color="#ff3366" />
+            </div>
+
+            {/* SL/TP Inputs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Stop Loss Price</label>
+                    <input
+                        type="number"
+                        value={sl}
+                        onChange={(e) => setSl(e.target.value)}
+                        placeholder="None"
+                        style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
+                    />
+                </div>
+                <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Take Profit Price</label>
+                    <input
+                        type="number"
+                        value={tp}
+                        onChange={(e) => setTp(e.target.value)}
+                        placeholder="None"
+                        style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
+                    />
+                </div>
+            </div>
+
+            {/* Risk warning for high leverage */}
+            {position.leverage >= 10 && (
+                <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '16px' }}>
+                    ⚠️ {position.leverage}x leverage —
+                    a {(100 / position.leverage).toFixed(1)}% move against you = liquidation
+                </p>
+            )}
+
+            {/* Confirm / Decline */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                    onClick={() => onConfirm(sl ? parseFloat(sl) : undefined, tp ? parseFloat(tp) : undefined)}
+                    style={{ flex: 1, background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', color: '#00ff88', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
+                    ✓ Confirm
+                </button>
+                <button
+                    onClick={onDecline}
+                    style={{ flex: 1, background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
+                    ✕ Decline
+                </button>
+            </div>
         </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '11px', color: '#8888aa', marginBottom: '6px' }}>Take Profit Price</label>
-          <input 
-            type="number"
-            value={tp}
-            onChange={(e) => setTp(e.target.value)}
-            placeholder="None"
-            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid #1a1a3a', color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '13px' }}
-          />
-        </div>
-      </div>
-      
-      {/* Risk warning for high leverage */}
-      {position.leverage >= 10 && (
-        <p style={{ color: '#ff3366', fontSize: '12px', marginBottom: '16px' }}>
-          ⚠️ {position.leverage}x leverage — 
-          a {(100/position.leverage).toFixed(1)}% move against you = liquidation
-        </p>
-      )}
-      
-      {/* Confirm / Decline */}
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <button
-          onClick={() => onConfirm(sl ? parseFloat(sl) : undefined, tp ? parseFloat(tp) : undefined)}
-          style={{ flex: 1, background: 'rgba(0,255,136,0.1)', border: '1px solid #00ff88', color: '#00ff88', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-        >
-          ✓ Confirm
-        </button>
-        <button
-          onClick={onDecline}
-          style={{ flex: 1, background: 'rgba(255,51,102,0.1)', border: '1px solid #ff3366', color: '#ff3366', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-        >
-          ✕ Decline
-        </button>
-      </div>
-    </div>
-  );
+    );
 };
 
 const MemoryCard = ({ memory }: { memory: any }) => {
-  if (!memory || memory.risk_profile === 'unknown') return null;
-  
-  const Stat = ({ label, value }: { label: string, value: string }) => (
-    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', flex: 1, minWidth: '100px' }}>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{value}</div>
-    </div>
-  );
+    if (!memory || memory.risk_profile === 'unknown') return null;
 
-  return (
-    <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', borderLeft: '3px solid #00d4ff' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-        <Activity size={16} color="#00d4ff" />
-        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#e2e8f0' }}>Your Trading Profile</h3>
-      </div>
-      
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
-        <Stat label="Risk Profile" value={memory.risk_profile} />
-        <Stat label="Win Rate" value={`${memory.win_rate?.toFixed(1) || 0}%`} />
-        <Stat label="Avg Trade Size" value={`$${memory.avg_trade_size?.toFixed(0) || 0}`} />
-        <Stat label="Avg Leverage" value={`${memory.leverage_preference?.toFixed(0) || 0}x`} />
-      </div>
+    const Stat = ({ label, value }: { label: string, value: string }) => (
+        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', flex: 1, minWidth: '100px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label}</div>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', textTransform: 'capitalize' }}>{value}</div>
+        </div>
+    );
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-        {memory.winning_patterns?.length > 0 && (
-          <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <CheckCircle size={12} /> Winning Patterns
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {memory.winning_patterns.map((p: string) => <div key={p} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {p}</div>)}
+    return (
+        <div className="glass-card" style={{ padding: '16px', marginBottom: '20px', borderLeft: '3px solid #00d4ff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <Activity size={16} color="#00d4ff" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#e2e8f0' }}>Your Trading Profile</h3>
             </div>
-          </div>
-        )}
 
-        {memory.common_mistakes?.length > 0 && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <AlertTriangle size={12} /> Watch Out For
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {memory.common_mistakes.map((m: string) => <div key={m} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {m}</div>)}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                <Stat label="Risk Profile" value={memory.risk_profile} />
+                <Stat label="Win Rate" value={`${memory.win_rate?.toFixed(1) || 0}%`} />
+                <Stat label="Avg Trade Size" value={`$${memory.avg_trade_size?.toFixed(0) || 0}`} />
+                <Stat label="Avg Leverage" value={`${memory.leverage_preference?.toFixed(0) || 0}x`} />
             </div>
-          </div>
-        )}
 
-        {memory.emotional_triggers?.length > 0 && (
-          <div style={{ background: 'rgba(139, 92, 246, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Activity size={12} /> Emotional Triggers
-            </h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {memory.emotional_triggers.map((t: string) => (
-                <span key={t} style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', color: '#d8b4fe' }}>
-                  {t}
-                </span>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                {memory.winning_patterns?.length > 0 && (
+                    <div style={{ background: 'rgba(16, 185, 129, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <CheckCircle size={12} /> Winning Patterns
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {memory.winning_patterns.map((p: string) => <div key={p} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {p}</div>)}
+                        </div>
+                    </div>
+                )}
+
+                {memory.common_mistakes?.length > 0 && (
+                    <div style={{ background: 'rgba(239, 68, 68, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <AlertTriangle size={12} /> Watch Out For
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {memory.common_mistakes.map((m: string) => <div key={m} style={{ fontSize: '12px', color: '#e2e8f0' }}>• {m}</div>)}
+                        </div>
+                    </div>
+                )}
+
+                {memory.emotional_triggers?.length > 0 && (
+                    <div style={{ background: 'rgba(139, 92, 246, 0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Activity size={12} /> Emotional Triggers
+                        </h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {memory.emotional_triggers.map((t: string) => (
+                                <span key={t} style={{ background: 'rgba(139, 92, 246, 0.2)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', color: '#d8b4fe' }}>
+                                    {t}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 
@@ -285,6 +287,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
     isLoading,
     memory,
     patternOverlay,
+    backtestResults,
 }) => {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [watchlistTab, setWatchlistTab] = React.useState<'my' | 'all'>('my');
@@ -565,8 +568,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                 borderColor: activeCoin?.id === coin.id ? 'rgba(0,212,255,0.5)' : undefined,
                                                 background: activeCoin?.id === coin.id ? 'rgba(0,212,255,0.08)' : undefined,
                                             }}
-                                            onMouseEnter={(e) => { if (activeCoin?.id !== coin.id) { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)'; e.currentTarget.style.background = 'rgba(0,212,255,0.05)'; }}}
-                                            onMouseLeave={(e) => { if (activeCoin?.id !== coin.id) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = ''; }}}
+                                            onMouseEnter={(e) => { if (activeCoin?.id !== coin.id) { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)'; e.currentTarget.style.background = 'rgba(0,212,255,0.05)'; } }}
+                                            onMouseLeave={(e) => { if (activeCoin?.id !== coin.id) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = ''; } }}
                                         >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 <img src={coin.image} alt={coin.symbol} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
@@ -888,7 +891,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                     <p style={{ color: '#e8e8ff', fontSize: '13px', fontFamily: 'JetBrains Mono', margin: 0 }}>
                                                         <AnimatedNumber value={coin.current_price} format={(n) => formatPrice(n)} />
                                                     </p>
-                                                    <p style={{ 
+                                                    <p style={{
                                                         color: (coin.price_change_percentage_24h || 0) >= 0 ? '#10ff88' : '#ff3366',
                                                         fontSize: '11px',
                                                         margin: 0
@@ -959,10 +962,10 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                 Export CSV
                             </button>
                         </div>
-                        
+
                         <MemoryCard memory={memory} />
 
-                        
+
 
                         <div style={{ marginBottom: '16px', position: 'relative' }}>
                             <input
@@ -1045,7 +1048,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                 </div>
 
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tx.network || 'BNB Smart Chain'} {tx.hash && tx.hash.length > 20 && `• ${tx.hash.slice(0,6)}...`}</span>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{tx.network || 'BNB Smart Chain'} {tx.hash && tx.hash.length > 20 && `• ${tx.hash.slice(0, 6)}...`}</span>
                                                     {tx.hash && tx.hash.length >= 64 && (
                                                         <a
                                                             href={`https://bscscan.com/tx/${tx.hash}`}
@@ -1104,7 +1107,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                                                         </div>
                                                     </div>
                                                 </div>
-            
+
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
                                                     <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Paper Trading {f.status === 'liquidated' ? '• (Liquidated)' : ''}</span>
                                                 </div>
@@ -1116,7 +1119,8 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         )}
                     </div>
                 )}
-                {/* ===== STRATEGIES VIEW (Dedicated) ===== */}
+
+                {/* ===== STRATEGIES BUILDER VIEW ===== */}
                 {view === 'strategies' && (
                     <div className="panel-content fade-in">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -1197,6 +1201,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         />
                     </div>
                 )}
+
                 {/* ===== FUTURES VIEW ===== */}
                 {view === 'futures' && (
                     <FuturesPanel
@@ -1214,6 +1219,62 @@ const RightPanel: React.FC<RightPanelProps> = ({
                         onConfirm={onConfirmFutures}
                         onDecline={onDeclineFutures}
                     />
+                )}
+
+                {/* ===== BACKTEST RESULTS VIEW (Scanner View) ===== */}
+                {view === 'backtest' && (
+                    <div className="panel-content fade-in">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(0, 212, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Activity size={18} color="#00d4ff" />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Backtest Results</h2>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Strategy Scan Summary</p>
+                            </div>
+                        </div>
+
+                        {!backtestResults ? (
+                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border-subtle)' }}>
+                                <Clock size={32} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                                <p style={{ fontSize: '14px' }}>No results yet.</p>
+                                <p style={{ fontSize: '11px', marginTop: '4px' }}>Run a strategy backtest in the scanner to see the detailed performance metrics here.</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>Profit</div>
+                                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#00ff88' }}>
+                                            ${backtestResults.totalProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#00ff88' }}>+{backtestResults.profitPercent}%</div>
+                                    </div>
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>Accuracy</div>
+                                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#00d4ff' }}>
+                                            {backtestResults.accuracy}%
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{backtestResults.winningTrades}W / {backtestResults.losingTrades}L</div>
+                                    </div>
+                                </div>
+
+                                <div className="glass-card" style={{ padding: '16px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>Performance Snapshot</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <Row label="Total Trades" value={backtestResults.totalTrades.toString()} />
+                                        <Row label="Winning Trades" value={backtestResults.winningTrades.toString()} color="#00ff88" />
+                                        <Row label="Losing Trades" value={backtestResults.losingTrades.toString()} color="#ff3366" />
+                                        <Row label="Final Balance" value={`$${backtestResults.finalBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
+                                    </div>
+                                </div>
+
+                                <div style={{ padding: '12px', background: 'rgba(0, 212, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(0, 212, 255, 0.1)', fontSize: '12px', lineHeight: '1.5', color: '#cbd5e1' }}>
+                                    <strong>Scanner Insight:</strong> This strategy shows strongest performance in high-volatility 4H timeframes. Consider adding a Volume filter to reduce false signals.
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* ===== LEARN ASSISTANT VIEW ===== */}
