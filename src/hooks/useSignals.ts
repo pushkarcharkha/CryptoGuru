@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 import type { Signal } from '../types';
 
 interface UseSignalsReturn {
@@ -27,7 +27,7 @@ export function useSignals(): UseSignalsReturn {
     useEffect(() => {
         const fetchUserStatus = async () => {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                const { data: { user } } = await getUserSafe();
                 if (!user) return;
 
                 setCurrentUserId(user.id);

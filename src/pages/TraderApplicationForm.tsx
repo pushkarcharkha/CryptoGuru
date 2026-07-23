@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { ChangeEvent, FormEvent, CSSProperties } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 interface ApplicationFormData {
     fullName: string;
@@ -50,7 +50,7 @@ const TraderApplicationForm: React.FC = () => {
             const {
                 data: { user },
                 error: userError
-            } = await supabase.auth.getUser();
+            } = await getUserSafe();
 
             if (userError || !user) {
                 throw new Error("User not authenticated");

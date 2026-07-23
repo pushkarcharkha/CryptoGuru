@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { getUserSafe } from '../lib/supabase';
 import type { TradingStrategy } from '../types';
 
 export const useStrategies = () => {
@@ -9,7 +9,7 @@ export const useStrategies = () => {
     const fetchStrategies = useCallback(async () => {
         setLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getUserSafe();
             if (!user) {
                 // Fallback to localStorage if not logged in
                 const saved = localStorage.getItem('cryptoguru_strategies');
@@ -32,7 +32,7 @@ export const useStrategies = () => {
     }, []);
 
     const saveToStorage = useCallback(async (newList: TradingStrategy[]) => {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getUserSafe();
         const key = user ? `cryptoguru_strategies_${user.id}` : 'cryptoguru_strategies';
         localStorage.setItem(key, JSON.stringify(newList));
         setStrategies(newList);

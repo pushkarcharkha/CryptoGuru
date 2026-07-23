@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, CheckCircle2, LoaderCircle, ShieldCheck } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { supabase, getUserSafe } from './lib/supabase';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
@@ -78,7 +78,7 @@ export default function PaymentPage() {
                 description: title,
                 handler: async (response: any) => {
                     console.log('Payment Success:', response);
-                    const { data: { user } } = await supabase.auth.getUser();
+                    const { data: { user } } = await getUserSafe();
                     if (user) {
                         await supabase.from('user_data').update({
                             plan: plan

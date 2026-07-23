@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import type { CryptoPrice, WalletState, PriceAlert } from '../types';
 import { AnimatedNumber } from './AnimatedNumber';
 import appLogo from '../assets/cryptoguru.png';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 interface TopBarProps {
   activeTab: 'agent' | 'signals';
@@ -45,7 +45,7 @@ const TopBar: React.FC<TopBarProps> = ({
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (user) {
         setUserEmail(user.email || '');
         const { data } = await supabase.from('user_data').select('plan').eq('id', user.id).single();

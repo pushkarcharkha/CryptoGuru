@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ async function saveMemory(userId: string, updates: Partial<UserMemory>): Promise
 // ── Main memory update dispatcher ────────────────────────────────────────────
 
 export async function updateUserMemory(event: MemoryEvent): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await getUserSafe();
   if (!user) return;
 
   const current = memoryCache ?? {};
@@ -192,7 +192,7 @@ export function useUserMemory() {
     if (memoryCache) { setIsLoaded(true); return; }
 
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (!user) { setIsLoaded(true); return; }
 
       const { data } = await supabase
@@ -217,7 +217,7 @@ export function useUserMemory() {
     if (messageCountRef.current % 10 === 0) {
       await updateUserMemory({ type: 'update_risk_profile' });
       // Refresh local state after profile update
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (user) {
         const { data } = await supabase.from('user_memory').select('*').eq('id', user.id).single();
         if (data) {
@@ -230,7 +230,7 @@ export function useUserMemory() {
 
   // Expose a refresh function after external updates
   const refreshMemory = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) return;
     const { data } = await supabase.from('user_memory').select('*').eq('id', user.id).single();
     if (data) {

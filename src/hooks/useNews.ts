@@ -25,7 +25,7 @@ const RSS_FEEDS = [
   }
 ];
 
-let newsCache = { data: [] as RSSArticle[], timestamp: 0 };
+const newsCache = { data: [] as RSSArticle[], timestamp: 0 };
 
 const fetchRSSNews = async (): Promise<RSSArticle[]> => {
   const allArticles: RSSArticle[] = [];

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FuturesPosition } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 const INITIAL_BALANCE = 1000;
 
@@ -27,7 +27,7 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
       if (initToken.current) return;
       initToken.current = true;
       
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (user) {
         setUserId(user.id);
         
@@ -153,7 +153,7 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
   }, [prices, checkExits]);
 
   const openPosition = async (coin: string, direction: 'long' | 'short', leverage: number, size: number, entryPrice: number, sl?: number | null, tp?: number | null) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) throw new Error('Not logged in');
 
     const margin = size / leverage;
@@ -198,7 +198,7 @@ export function useFutures(prices: Record<string, { usd: number }> | null) {
   };
 
   const closePosition = useCallback(async (id: number, exitPrice: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     
     setPositions((prev: FuturesPosition[]) => {
       const pos = prev.find((p: FuturesPosition) => p.id === id);

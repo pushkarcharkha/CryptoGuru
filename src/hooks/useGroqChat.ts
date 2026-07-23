@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Message, PortfolioHolding, AppTransaction } from '../types';
 import { detectAgent, detectFuturesIntent, buildAgentPrompt } from '../agents';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 import type { AgentType, AgentContext } from '../agents';
 import {
   detectResearchIntent,
@@ -73,7 +73,7 @@ export function useGroqChat(apiKey: string, onActionDetected?: (action: string, 
 
       // ── 0. Check Free Plan AI Prompt Limit ────────────────────────────
       const checkPromptLimit = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getUserSafe();
         if (!user) return false;
 
         const { data } = await supabase

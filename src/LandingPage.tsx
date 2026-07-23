@@ -220,7 +220,7 @@ export default function LandingPage() {
         scene.add(new THREE.Points(particleGeometry, particleMaterial));
 
         // Mouse Parallax
-        let targetCameraPos = { x: 0, y: 0 };
+        const targetCameraPos = { x: 0, y: 0 };
         const onMouseMove = (e: MouseEvent) => {
             targetCameraPos.x = (e.clientX / window.innerWidth - 0.5) * 2.0;
             targetCameraPos.y = (-e.clientY / window.innerHeight + 0.5) * 2.0;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CoinGeckoCoin } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 const COINGECKO_URL = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=true&price_change_percentage=24h';
 
@@ -18,7 +18,7 @@ export const useWatchlist = () => {
 
   useEffect(() => {
     const fetchWatchlist = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (!user) return;
       const { data } = await supabase.from('watchlist').select('*').eq('user_id', user.id);
       if (data && data.length > 0) {
@@ -70,7 +70,7 @@ export const useWatchlist = () => {
     const isWatched = watchlistIds.includes(coinId);
     setWatchlistIds(prev => isWatched ? prev.filter(id => id !== coinId) : [...prev, coinId]);
     
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) return;
 
     if (isWatched) {

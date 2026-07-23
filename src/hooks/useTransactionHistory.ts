@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppTransaction } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 export const useTransactionHistory = () => {
   const [history, setHistory] = useState<AppTransaction[]>([]);
 
   useEffect(() => {
     const fetchHistory = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (!user) return;
       const { data } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
       if (data) {
@@ -44,7 +44,7 @@ export const useTransactionHistory = () => {
       return newHistory;
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) return;
 
     // Check if it exists in Supabase

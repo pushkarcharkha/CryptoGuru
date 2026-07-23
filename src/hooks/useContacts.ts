@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, getUserSafe } from '../lib/supabase';
 
 export type ContactsMap = Record<string, string>;
 
@@ -9,7 +9,7 @@ export function useContacts() {
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await getUserSafe();
         if (!user) return;
         
         const { data } = await supabase.from('contacts').select('*').eq('user_id', user.id);
@@ -35,7 +35,7 @@ export function useContacts() {
     setContacts((prev) => {
       return { ...prev, [name.toLowerCase()]: address };
     });
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) return;
     
     await supabase.from('contacts').insert({
@@ -51,7 +51,7 @@ export function useContacts() {
       delete next[name.toLowerCase()];
       return next;
     });
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await getUserSafe();
     if (!user) return;
     await supabase.from('contacts').delete().eq('user_id', user.id).eq('name', name.toLowerCase());
   }, []);

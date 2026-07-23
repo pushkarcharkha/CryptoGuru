@@ -27,42 +27,42 @@ import type { AcademyLesson, ChartPatternOverlay } from './types';
 import type { RightPanelView, SidebarFeature, Signal, TransactionPreview, SwapPreview, CoinGeckoCoin, FuturesPosition } from './types';
 import { ethers } from 'ethers';
 import { UpgradeModal } from './components/UpgradeModal';
-import { supabase } from './lib/supabase';
+import { supabase, getUserSafe } from './lib/supabase';
 import { useStrategyMonitor } from './hooks/useStrategyMonitor';
 
 const UI_TEXT = {
-  english: {
-    portfolio: 'Portfolio',
-    wallet: 'Wallet & Contacts',
-    watchlist: 'Watchlist',
-    chart: 'Chart Analysis',
-    'news-sentiment': 'News & Sentiment',
-    futures: 'Futures',
-    journal: 'Trade Journal',
-    learn: 'Learn Hub',
-    backtest: 'Backtest Results',
-    settings: 'Settings',
-    connectWallet: 'Connect Wallet',
-    placeholder: 'Ask about crypto, request a chart analysis or describe a trade...',
-    signalFeed: 'Signal Feed',
-    aiAgent: 'AI Agent'
-  },
-  hindi: {
-    portfolio: 'पोर्टफोलियो',
-    wallet: 'वॉलेट और संपर्क',
-    watchlist: 'वॉचलिस्ट',
-    chart: 'चार्ट विश्लेषण',
-    'news-sentiment': 'समाचार और भावना',
-    futures: 'फ्यूचर्स',
-    journal: 'ट्रेड जर्नल',
-    learn: 'लर्न हब',
-    backtest: 'बैकटेस्ट परिणाम',
-    settings: 'सेटिंग्स',
-    connectWallet: 'वॉलेट जोड़ें',
-    placeholder: 'क्रिप्टो के बारे में पूछें, चार्ट विश्लेषण करें, या ट्रेड करें...',
-    signalFeed: 'सिग्नल फीड',
-    aiAgent: 'AI एजेंट'
-  }
+    english: {
+        portfolio: 'Portfolio',
+        wallet: 'Wallet & Contacts',
+        watchlist: 'Watchlist',
+        chart: 'Chart Analysis',
+        'news-sentiment': 'News & Sentiment',
+        futures: 'Futures',
+        journal: 'Trade Journal',
+        learn: 'Learn Hub',
+        backtest: 'Backtest Results',
+        settings: 'Settings',
+        connectWallet: 'Connect Wallet',
+        placeholder: 'Ask about crypto, request a chart analysis or describe a trade...',
+        signalFeed: 'Signal Feed',
+        aiAgent: 'AI Agent'
+    },
+    hindi: {
+        portfolio: 'पोर्टफोलियो',
+        wallet: 'वॉलेट और संपर्क',
+        watchlist: 'वॉचलिस्ट',
+        chart: 'चार्ट विश्लेषण',
+        'news-sentiment': 'समाचार और भावना',
+        futures: 'फ्यूचर्स',
+        journal: 'ट्रेड जर्नल',
+        learn: 'लर्न हब',
+        backtest: 'बैकटेस्ट परिणाम',
+        settings: 'सेटिंग्स',
+        connectWallet: 'वॉलेट जोड़ें',
+        placeholder: 'क्रिप्टो के बारे में पूछें, चार्ट विश्लेषण करें, या ट्रेड करें...',
+        signalFeed: 'सिग्नल फीड',
+        aiAgent: 'AI एजेंट'
+    }
 };
 
 let chartAnalysisInProgress = false;
@@ -105,10 +105,10 @@ function App() {
 
     useEffect(() => {
         const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await getUserSafe();
             if (user) {
                 setUserData({ id: user.id, email: user.email || '' });
-                
+
                 // Fetch language from Supabase
                 const { data } = await supabase.from('user_data').select('language').eq('id', user.id).single();
                 if (data?.language) {
@@ -367,7 +367,7 @@ function App() {
     
     Be direct and specific. No generic advice.
   `;
-                    
+
 
                     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
@@ -379,7 +379,7 @@ function App() {
                             max_tokens: 300
                         })
                     });
-                    
+
 
                     if (groqRes.ok) {
                         const aiData = await groqRes.json();
@@ -435,7 +435,7 @@ function App() {
     const handleConfirmFutures = async (sl?: any, tp?: any) => {
         if (!pendingFuturesPosition) return;
         const { coin, direction, leverage, size, entryPrice } = pendingFuturesPosition;
-        
+
 
         // Ensure arguments are numbers, not React Events
         const finalSl = typeof sl === 'number' ? sl : undefined;
@@ -473,9 +473,9 @@ function App() {
 
     useEffect(() => {
         if (messages.length === 0 && apiKey) {
-            const content = language === 'hindi' 
-              ? 'नमस्ते! मैं आपका crypto co-pilot हूं। अपना wallet connect करें या मुझसे कुछ भी पूछें।'
-              : "Hey, I'm your crypto co-pilot. Connect your wallet or just ask me anything to get started.";
+            const content = language === 'hindi'
+                ? 'नमस्ते! मैं आपका crypto co-pilot हूं। अपना wallet connect करें या मुझसे कुछ भी पूछें।'
+                : "Hey, I'm your crypto co-pilot. Connect your wallet or just ask me anything to get started.";
             addSystemMessage(content);
         }
     }, [messages.length, apiKey, language, addSystemMessage]);
@@ -671,7 +671,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
         } catch (err: any) {
             console.error('Transaction Error:', err);
-            
+
             const isRejected = err.code === 'ACTION_REJECTED' || (err.message && err.message.toLowerCase().includes('reject')) || err.info?.error?.code === 4001;
 
             if (isRejected) {
@@ -757,7 +757,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
 
         } catch (err: any) {
             console.error('Swap Error:', err);
-            
+
             const isRejected = err.code === 'ACTION_REJECTED' || (err.message && err.message.toLowerCase().includes('reject')) || err.info?.error?.code === 4001;
 
             if (isRejected) {
@@ -808,7 +808,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             // --- Alert Detection ---
             const alertRegex = /(?:notify|alert|tell) me (?:when|if) ([a-zA-Z]+) (?:crosses|hits|is|goes|above|below|over|under)\s*([<>]?\s*[\d,.]+)/i;
             const alertMatch = content.match(alertRegex);
-            
+
 
             if (alertMatch) {
                 const coinStr = alertMatch[1].toLowerCase();
@@ -948,7 +948,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
             if (triggered) {
                 markAsTriggered(alert.id);
                 addSystemMessageProxy(`🔔 **ALERT TRIGGERED:** ${alert.symbol.toUpperCase()} has reached **$${currentPrice.toLocaleString()}** (Target: $${alert.targetPrice.toLocaleString()})`);
-                
+
 
                 // Also try native notification
                 if (Notification.permission === 'granted') {
@@ -1081,7 +1081,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                 {/* Center Panel */}
                 <div className="app-chat-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
                     {activeFeature === 'learn' ? (
-                        <LearnPanel 
+                        <LearnPanel
                             onOpenAssistant={(lesson: AcademyLesson) => {
                                 clearMessages(language);
                                 setRightPanelView('learn-assistant');
@@ -1104,7 +1104,7 @@ Using ONLY these exact numbers give a professional trading analysis. Include:
                                     balance: futuresBalance,
                                     positions: futuresPositions
                                 }, 'learn', null, { hidden: true });
-                            }} 
+                            }}
 
                             onTryOnMarket={(lesson: AcademyLesson) => {
                                 setActiveFeature('chart');

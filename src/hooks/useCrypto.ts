@@ -57,28 +57,32 @@ export function useCryptoPrices(coinIds: string[] = ['bitcoin', 'ethereum', 'sol
 
   useEffect(() => {
     fetchPrices();
-    
-    // Connect to Binance WebSocket for live prices
+
+    let isMounted = true;
     const ws = new WebSocket('wss://stream.binance.com:9443/ws/!miniTicker@arr');
-    
+
+    ws.onopen = () => {
+      if (!isMounted) ws.close();
+    };
+
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (Array.isArray(data)) {
           setPrices(prevPrices => {
             if (prevPrices.length === 0) return prevPrices;
-            
+
             let updated = false;
             const updatedPrices = prevPrices.map(p => {
               // Stablecoins
               if (p.symbol === 'USDT' || p.symbol === 'USDC') return p;
-              
+
               const ticker = data.find(t => t.s === `${p.symbol}USDT`);
               if (ticker) {
                 const newPrice = parseFloat(ticker.c);
                 const openPrice = parseFloat(ticker.o);
                 const change24h = openPrice > 0 ? ((newPrice - openPrice) / openPrice) * 100 : p.change24h;
-                
+
                 if (p.price !== newPrice) {
                   updated = true;
                   return { ...p, price: newPrice, change24h };
@@ -86,7 +90,7 @@ export function useCryptoPrices(coinIds: string[] = ['bitcoin', 'ethereum', 'sol
               }
               return p;
             });
-            
+
             return updated ? updatedPrices : prevPrices;
           });
         }
@@ -100,7 +104,10 @@ export function useCryptoPrices(coinIds: string[] = ['bitcoin', 'ethereum', 'sol
     };
 
     return () => {
-      ws.close();
+      isMounted = false;
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
     };
   }, [fetchPrices]);
 
